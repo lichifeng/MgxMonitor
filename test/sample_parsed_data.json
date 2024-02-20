@@ -1,0 +1,287 @@
+{
+  "chat": [
+    {
+      "msg": "@#3月者别: 哎呀，我没办法在黑暗时代建造世界奇观。",
+      "time": 8309176
+    },
+    {
+      "msg": "@#3月者别: 难怪你会胜利！看来我该让贤了。",
+      "time": 8309176
+    },
+    {
+      "msg": "@#7奥尔良的约翰登瓦: 我刚开始的所有人民都是男性。",
+      "time": 14422896
+    },
+    {
+      "msg": "@#7奥尔良的约翰登瓦: 难怪你会胜利！看来我该让贤了。",
+      "time": 14422896
+    },
+    {
+      "msg": "@#5Curl Snout: 一刚开始只有一个斥侯出现而已。",
+      "time": 14863399
+    },
+    {
+      "msg": "@#5Curl Snout: 难怪你会胜利！看来我该让贤了。",
+      "time": 14863399
+    },
+    {
+      "msg": "@#2红衣艾立克: 哎呀，我没办法在黑暗时代建造世界奇观。",
+      "time": 15019079
+    },
+    {
+      "msg": "@#2红衣艾立克: 难怪你会胜利！看来我该让贤了。",
+      "time": 15019079
+    },
+    {
+      "msg": "@#4伊达政宗: 哎呀，我没办法在黑暗时代建造世界奇观。",
+      "time": 16443927
+    },
+    {
+      "msg": "@#4伊达政宗: 难怪你会胜利！看来我该让贤了。",
+      "time": 16443927
+    },
+    {
+      "msg": "@#8加拉安: 我的人民都挤在我的城镇中心附近。",
+      "time": 17040603
+    },
+    {
+      "msg": "@#8加拉安: 难怪你会胜利！看来我该让贤了。",
+      "time": 17040603
+    }
+  ],
+  "duration": 17040679,
+  "fileext": ".mgx",
+  "filename": "AOC10c_MIX_1_7ce24dd2.mgx",
+  "guid": "07a47274f462a2487fc96ad81be8ebe1",
+  "includeAI": true,
+  "instruction": "武力征服游戏：获胜的条件是摧毁全部的敌对村民、军事单位、船舰和建筑。\n地图大小：大型 (8 名游戏者)\n时代：标准\n资源：标准\n难易度：最难\n固定位置：是\n显示地图：否\n完全科技树状图：否\n人口上限：200",
+  "isMultiplayer": false,
+  "lastModified": "2024-02-05T08:27:24.000Z",
+  "map": {
+    "name": "阿拉伯半岛",
+    "nameEn": "Arabia",
+    "size": "大型 (8 个玩家)",
+    "sizeEn": "Large (8 player)"
+  },
+  "md5": "7ce24dd2608dec17d85d48c781853997",
+  "message": "",
+  "parseTime": 76.365076,
+  "parser": "MgxParser 0.5.0 (Linux/GNU)",
+  "players": [
+    {
+      "castleTime": 1085338,
+      "civilization": {
+        "id": 11,
+        "name": "维京",
+        "nameEn": "Vikings"
+      },
+      "colorIndex": 0,
+      "disconnected": false,
+      "feudalTime": 823653,
+      "imperialTime": 2146778,
+      "index": 1,
+      "initPosition": [
+        189.0,
+        159.0
+      ],
+      "isWinner": true,
+      "mainOp": true,
+      "name": "JPETER_α",
+      "slot": 1,
+      "team": 11,
+      "type": "人类",
+      "typeEn": "Human"
+    },
+    {
+      "castleTime": 577257,
+      "civilization": {
+        "id": 11,
+        "name": "维京",
+        "nameEn": "Vikings"
+      },
+      "colorIndex": 1,
+      "disconnected": true,
+      "feudalTime": 326775,
+      "imperialTime": 2505083,
+      "index": 2,
+      "initPosition": [
+        89.0,
+        182.0
+      ],
+      "isWinner": false,
+      "mainOp": true,
+      "name": "红衣艾立克",
+      "resigned": 15019155,
+      "slot": 2,
+      "team": 12,
+      "type": "AI",
+      "typeEn": "AI"
+    },
+    {
+      "castleTime": 578688,
+      "civilization": {
+        "id": 12,
+        "name": "蒙古",
+        "nameEn": "Mongols"
+      },
+      "colorIndex": 2,
+      "disconnected": true,
+      "feudalTime": 328201,
+      "index": 3,
+      "initPosition": [
+        193.0,
+        66.0
+      ],
+      "isWinner": false,
+      "mainOp": true,
+      "name": "月者别",
+      "resigned": 8309254,
+      "slot": 3,
+      "team": 13,
+      "type": "AI",
+      "typeEn": "AI"
+    },
+    {
+      "castleTime": 695310,
+      "civilization": {
+        "id": 5,
+        "name": "日本",
+        "nameEn": "Japanese"
+      },
+      "colorIndex": 3,
+      "disconnected": true,
+      "feudalTime": 315733,
+      "index": 4,
+      "initPosition": [
+        22.0,
+        72.0
+      ],
+      "isWinner": false,
+      "mainOp": true,
+      "name": "伊达政宗",
+      "resigned": 16444002,
+      "slot": 4,
+      "team": 14,
+      "type": "AI",
+      "typeEn": "AI"
+    },
+    {
+      "castleTime": 770476,
+      "civilization": {
+        "id": 16,
+        "name": "玛雅",
+        "nameEn": "Mayans"
+      },
+      "colorIndex": 4,
+      "disconnected": true,
+      "feudalTime": 312500,
+      "imperialTime": 2365408,
+      "index": 5,
+      "initPosition": [
+        149.0,
+        50.0
+      ],
+      "isWinner": false,
+      "mainOp": true,
+      "name": "Curl Snout",
+      "resigned": 14863475,
+      "slot": 5,
+      "team": 15,
+      "type": "AI",
+      "typeEn": "AI"
+    },
+    {
+      "castleTime": 1178637,
+      "civilization": {
+        "id": 13,
+        "name": "凯尔特",
+        "nameEn": "Celts"
+      },
+      "colorIndex": 5,
+      "disconnected": false,
+      "feudalTime": 293968,
+      "imperialTime": 2288863,
+      "index": 6,
+      "initPosition": [
+        91.0,
+        39.0
+      ],
+      "isWinner": true,
+      "mainOp": true,
+      "name": "艾依米里",
+      "slot": 6,
+      "team": 16,
+      "type": "AI",
+      "typeEn": "AI"
+    },
+    {
+      "castleTime": 618220,
+      "civilization": {
+        "id": 2,
+        "name": "法兰克",
+        "nameEn": "Franks"
+      },
+      "colorIndex": 6,
+      "disconnected": true,
+      "feudalTime": 341568,
+      "imperialTime": 3974322,
+      "index": 7,
+      "initPosition": [
+        32.0,
+        126.0
+      ],
+      "isWinner": false,
+      "mainOp": true,
+      "name": "奥尔良的约翰登瓦",
+      "resigned": 14422971,
+      "slot": 7,
+      "team": 17,
+      "type": "AI",
+      "typeEn": "AI"
+    },
+    {
+      "castleTime": 785521,
+      "civilization": {
+        "id": 9,
+        "name": "萨拉森",
+        "nameEn": "Saracens"
+      },
+      "colorIndex": 7,
+      "disconnected": true,
+      "feudalTime": 378522,
+      "imperialTime": 1392557,
+      "index": 8,
+      "initPosition": [
+        32.0,
+        165.0
+      ],
+      "isWinner": false,
+      "mainOp": true,
+      "name": "加拉安",
+      "resigned": 17040679,
+      "slot": 8,
+      "team": 18,
+      "type": "AI",
+      "typeEn": "AI"
+    }
+  ],
+  "population": 200,
+  "realext": ".mgx",
+  "realfile": "AOC10c_MIX_1_7ce24dd2.mgx",
+  "recPlayer": 1,
+  "speed": "正常",
+  "speedEn": "Normal",
+  "status": "perfect",
+  "teamMode": "1v1v1v1v1v1v1v1",
+  "version": {
+    "code": "AOC10C",
+    "logVer": 4,
+    "rawStr": "VER 9.4",
+    "saveVer": 11.760000228881836,
+    "scenarioVersion": 1.2200000286102295
+  },
+  "victory": {
+    "type": "默认",
+    "typeEn": "Default"
+  }
+}
