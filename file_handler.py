@@ -283,8 +283,6 @@ Packed at {current_time}
                 z.comment = comment_template.encode('ASCII')
 
             try:
-                print('uploading: ' + self.OSS_RECORD_DIR +
-                      data['md5'] + '.zip')
                 result = self._s3_conn.upload(
                     temp_file, self.OSS_RECORD_DIR + data['md5'] + '.zip')
                 # print('uploaded: ' + result.object_name)

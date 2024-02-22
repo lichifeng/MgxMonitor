@@ -52,20 +52,21 @@
   "duration": 17040679,
   "fileext": ".mgx",
   "filename": "AOC10c_MIX_1_7ce24dd2.mgx",
+  "gameTime": 1707121644,
   "guid": "07a47274f462a2487fc96ad81be8ebe1",
   "includeAI": true,
   "instruction": "武力征服游戏：获胜的条件是摧毁全部的敌对村民、军事单位、船舰和建筑。\n地图大小：大型 (8 名游戏者)\n时代：标准\n资源：标准\n难易度：最难\n固定位置：是\n显示地图：否\n完全科技树状图：否\n人口上限：200",
   "isMultiplayer": false,
-  "lastModified": "2024-02-05T08:27:24.000Z",
   "map": {
     "name": "阿拉伯半岛",
     "nameEn": "Arabia",
     "size": "大型 (8 个玩家)",
     "sizeEn": "Large (8 player)"
   },
+  "matchup": "1v1v1v1v1v1v1v1",
   "md5": "7ce24dd2608dec17d85d48c781853997",
   "message": "",
-  "parseTime": 76.365076,
+  "parseTime": 77.501129,
   "parser": "MgxParser 0.5.0 (Linux/GNU)",
   "players": [
     {
@@ -272,7 +273,6 @@
   "speed": "正常",
   "speedEn": "Normal",
   "status": "perfect",
-  "teamMode": "1v1v1v1v1v1v1v1",
   "version": {
     "code": "AOC10C",
     "logVer": 4,

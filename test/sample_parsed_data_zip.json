@@ -176,20 +176,21 @@
   "duration": 3223100,
   "fileext": ".zip",
   "filename": "AOC10c_2v2_4_717cd3fc.zip",
+  "gameTime": 1593592438,
   "guid": "7bc37bf3d04c3a9c91c78cf36a08870a",
   "includeAI": false,
   "instruction": "Conquest Game: Win this game by destroying all enemy villagers, military units, boats, and buildings.\nMap Size: Small (3 player)\nMap Type: ![GA-DM]!\nAge: Post-Imperial Age\nResources: Standard\nDifficulty Level: Easiest\nFixed Positions: Yes\nReveal Map: Yes\nFull Tech Tree: No\nEnable Cheating: No\nPopulation Limit: 200",
   "isMultiplayer": true,
-  "lastModified": "2020-07-01T16:33:58.000Z",
   "map": {
     "name": "定制",
     "nameEn": "Custom",
     "size": "小型 (3 个玩家)",
     "sizeEn": "Small (3 player)"
   },
+  "matchup": "2v2",
   "md5": "717cd3fc274a200ba81a2cc2cc65c288",
   "message": "",
-  "parseTime": 33.476093,
+  "parseTime": 33.337086,
   "parser": "MgxParser 0.5.0 (Linux/GNU)",
   "players": [
     {
@@ -328,7 +329,6 @@
   "speed": "快",
   "speedEn": "Fast",
   "status": "perfect",
-  "teamMode": "2v2",
   "version": {
     "code": "AOC10C",
     "logVer": 4,
