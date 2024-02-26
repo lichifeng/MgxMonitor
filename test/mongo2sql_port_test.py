@@ -5,6 +5,7 @@
 #  - MySQL: login with username 'example username' and password 'example password'
 # Test their connectbility.
 
+from hashlib import md5
 import json
 import logging
 import time
@@ -21,7 +22,8 @@ logging.basicConfig(filename='./error3.txt',
                     level=logging.ERROR, format='%(asctime)s %(message)s')
 
 # MongoDB connection
-mongo_client = MongoClient('mongodb://root:example@172.20.0.3:27017/')
+# docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' mgxhub_dev_mongo_1
+mongo_client = MongoClient('mongodb://root:example@172.20.0.2:27017/')
 mongo_db = mongo_client['mgxhub']
 mongo_collection = mongo_db['records']
 
@@ -32,12 +34,13 @@ try:
     print("MongoDB connection successful")
 except:
     print("Could not connect to MongoDB")
+    exit()
 
 
 # Function to insert a single document from MongoDB into MySQL
 def insert_game_data(doc, session):
     session.add(Game(
-        game_guid=doc.get('guid'),
+        game_guid=doc.get('guid', str(doc['_id'])),
         duration=doc.get('duration'),
         include_ai=doc.get('includeAI'),
         is_multiplayer=doc.get('isMultiplayer'),
@@ -89,6 +92,7 @@ def insert_game_data(doc, session):
                 slot=player_data[1],
                 index_player=player_data[2],
                 name=player_data[3],
+                name_hash=md5(player_data[3].encode('utf-8')).hexdigest(),
                 type=player_data[4],
                 team=player_data[5],
                 color_index=player_data[6],

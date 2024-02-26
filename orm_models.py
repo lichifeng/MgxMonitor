@@ -63,6 +63,7 @@ class Player(Base):
     slot = Column(SmallInteger)
     index_player = Column(SmallInteger)
     name = Column(String(255), index=True, default='<NULL>')
+    name_hash = Column(String(32), index=True, default='3a7ac8a2092fc743e423336f473c7dac') # md5 of <NULL>
     type = Column(String(20))
     team = Column(SmallInteger)
     color_index = Column(SmallInteger)
@@ -150,6 +151,28 @@ class Chat(Base):
     game = relationship('Game', back_populates='chats')
     recorder = relationship('Player', back_populates='chat', primaryjoin='foreign(Chat.recorder_slot) == Player.slot and Chat.game_guid == Player.game_guid')
 
+class Ratings(Base):
+    '''Ratings information.
+
+    Ratings information for each player.
+    '''
+
+    __tablename__ = 'ratings'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    version_code = Column(String(10))
+    matchup = Column(String(20))
+    name_hash = Column(String(32), index=True)
+    rating = Column(Integer)
+    wins = Column(Integer)
+    total = Column(Integer)
+    streak = Column(Integer)
+    streak_max = Column(Integer)
+    highest = Column(Integer)
+    lowest = Column(Integer)
+    first_played = Column(DateTime)
+    last_played = Column(DateTime)
 
 # Create indexes
 # Index('idx_game_guid', Game.game_guid)

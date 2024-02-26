@@ -1,9 +1,9 @@
 -- 首页的统计数据
-SELECT 'Unique game_guid count', COUNT(DISTINCT game_guid) AS count FROM games
+SELECT 'Unique games', COUNT(DISTINCT game_guid) AS count FROM games
 UNION ALL
-SELECT 'Unique player name count', COUNT(DISTINCT name) FROM players
+SELECT 'Unique players', COUNT(DISTINCT name) FROM players
 UNION ALL
-SELECT 'Games updated last month count', COUNT(*) FROM games WHERE strftime('%m', modified) = strftime('%m', datetime('now', '-1 month')) AND strftime('%Y', modified) = strftime('%Y', 'now');
+SELECT 'Mounthly new games', COUNT(*) FROM games WHERE strftime('%m', modified) = strftime('%m', datetime('now', '-1 month')) AND strftime('%Y', modified) = strftime('%Y', 'now');
 
 -- 提取随便机家ID云（含玩家参加过的游戏数量）
 SELECT name, game_count FROM (

@@ -8,6 +8,10 @@ import unittest
 import record_parser as rp
 from s3_adapter import S3Adapter
 from file_handler import FileHandler
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from elo_calc import EloCalculator
+from orm_models import Ratings, Base
 
 s3_test = [
     "play.min.io",
@@ -108,6 +112,35 @@ class TestS3Uploader(unittest.TestCase):
 
         result = ossconn.have(random_filename + 'notexist')
         self.assertFalse(result)
+
+# Test elo_calc.py
+class TestEloCalculator(unittest.TestCase):
+    def setUp(self):
+        # Create a new EloCalculator for each test
+        engine = create_engine('sqlite:///test_db2.sqlite3')
+        # Create all tables
+        Base.metadata.create_all(engine)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        self.calculator = EloCalculator(session)
+
+    def test_update_ratings(self):
+        # Test that update_ratings works correctly
+        start_time = time.time()
+        self.calculator.update_ratings(batch_size=500000)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"\r\nCalculation time: {elapsed_time} seconds")
+
+        top_10 = self.calculator._session.query(Ratings).filter(
+            Ratings.version_code == 'AOC10',
+            Ratings.matchup == 'team'
+        ).order_by(
+            Ratings.rating.desc()
+        ).limit(20).all()
+        print(f"\r\nTop 20 team ratings for AOC10 team games:")
+        for row in top_10:
+            print(f"[{row.id}] {row.name_hash}: {row.rating} wins: {row.wins} total: {row.total} highest: {row.highest} lowest: {row.lowest} streak: {row.streak}/{row.streak_max} first_played: {row.first_played} last_played: {row.last_played}")
 
 
 if __name__ == '__main__':

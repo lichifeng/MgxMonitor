@@ -1,9 +1,10 @@
 import json
 import time
+from hashlib import md5
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from orm_models import Base, Game, Player, File, Chat, LegacyInfo
+from orm_models import Base, Game, Player, File, Chat, LegacyInfo, Ratings
 
 start_time = time.time()
 
@@ -44,12 +45,14 @@ session.add(Game(
 players = []
 if 'players' in test_data and isinstance(test_data['players'], list):
     for p in test_data['players']:
+        player_name = '<EMPTY>' if p.get('name') == '' else p.get('name')
         players.append(
             Player(
                 game_guid=test_data.get('guid'),
                 slot=p.get('slot'),
                 index_player=p.get('index'),
-                name='<EMPTY>' if p.get('name') == '' else p.get('name'),
+                name=player_name,
+                name_hash=md5(player_name.encode('utf-8')).hexdigest(),
                 type=p.get('typeEn'),
                 team=p.get('team'),
                 color_index=p.get('colorIndex'),
@@ -107,4 +110,70 @@ engine.dispose()
 
 
 class DBHandler:
-    pass
+    '''Communicate with the database.'''
+
+    _db_path = None
+    _db_engine = None
+    _db_session = None
+
+    def __init__(self, db_path: str):
+        pass
+
+    def _load_db(self):
+        pass
+
+    @property
+    def session(self):
+        pass
+
+    def get_game(self, game_guid: str | list) -> dict | list:
+        pass
+
+    def insert_game(self, game: dict) -> str:
+        pass
+
+    def delete_game(self, game_guid: str) -> bool:
+        pass
+
+    def stat_index_count(self) -> dict:
+        '''Unique games/players count, new games this month.'''
+        pass
+
+    def stat_rand_players(self, threshold: int = 10, limit: int = 300) -> list:
+        '''Random players.
+        
+        Including total games of each player. Used mainly in player cloud.
+
+        Args:
+            threshold: minimum games of a player to be included.
+            limit: maximum number of players to be included.
+        '''
+        pass
+
+    def stat_last_players(self, limit: int = 300) -> list:
+        '''Newly found players.
+        
+        Including won games, total games, and 1v1 games counts.
+
+        Args:
+            limit: maximum number of players to be included.
+        '''
+        pass
+
+    def stat_close_friends(self, player_name: str, limit: int = 300) -> list:
+        '''Players who played with the given player most.'''
+        pass
+
+    def filter_games(self, filters: dict, limit: int = 100) -> list:
+        '''Filter games by given conditions.'''
+        pass
+
+    def update_ratings(self, ratings_dict: dict, batch_size: int = None) -> bool:
+        '''Update ratings of players.'''
+
+        if batch_size is None:
+            batch_size = len(ratings_dict)
+
+        for i in range(0, len(ratings_dict), batch_size):
+            self.session.bulk_insert_mappings(Ratings, ratings_dict[i:i+batch_size])
+            self.session.commit()
