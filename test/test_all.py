@@ -1,3 +1,5 @@
+'''Tests'''
+
 import os
 import time
 import uuid
@@ -5,13 +7,13 @@ from shutil import copyfile
 from time import sleep
 import asyncio
 import unittest
-import record_parser as rp
-from s3_adapter import S3Adapter
-from file_handler import FileHandler
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from elo_calc import EloCalculator
-from orm_models import Ratings, Base
+from mgxhub.rating import EloCalculator
+from mgxhub.model.orm import Rating, Base
+from mgxhub.parser import parse
+from mgxhub.handler import FileHandler
+from mgxhub.storage import S3Adapter
 
 s3_test = [
     "play.min.io",
@@ -21,9 +23,14 @@ s3_test = [
 ]
 
 
-# Test file_handler.py
 class TestFileHandler(unittest.IsolatedAsyncioTestCase):
+    '''Test FileHandler class.
+    Path: mgxhub/handler/file_handler.py
+    '''
+
     def test_handle_record_sync(self):
+        '''Test file uploading process.'''
+
         start_time = time.time()
 
         test_obj1 = '/records/7ce24dd2608dec17d85d48c781853997.zip'
@@ -32,9 +39,13 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         ossconn.remove_object(test_obj1)
         ossconn.remove_object(test_obj2)
 
-        copyfile('test/recs_in_zip.zip', 'test/recs_in_zip_tmp.zip')
+        script_path = os.path.abspath(__file__)
+        script_dir = os.path.dirname(script_path)
+        f1 = os.path.join(script_dir, 'samples/recs_in_zip.zip')
+        f2 = os.path.join(script_dir, 'samples/recs_in_zip_tmp.zip')
+        copyfile(f1, f2)
 
-        hd = FileHandler('test/recs_in_zip_tmp.zip', s3_test, False, "", True)
+        hd = FileHandler(f2, s3_test, False, "", True)
         result = hd.process()
         self.assertEqual(result['status'], 'success')
         end_time = time.time()
@@ -45,6 +56,8 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(ossconn.have('/records/717cd3fc274a200ba81a2cc2cc65c288.zip'))
 
     def test_handle_record_async(self):
+        '''Test file uploading process with async.'''
+
         start_time = time.time()
 
         test_obj1 = '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'
@@ -52,9 +65,13 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         ossconn.remove_object(test_obj1)
         self.assertFalse(ossconn.have('/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
 
-        copyfile('test/test_record1.mgx', 'test/test_record1_tmp.mgx')
+        script_path = os.path.abspath(__file__)
+        script_dir = os.path.dirname(script_path)
+        f1 = os.path.join(script_dir, 'samples/test_record1.mgx')
+        f2 = os.path.join(script_dir, 'samples/test_record1_tmp.mgx')
+        copyfile(f1, f2)
 
-        hd = FileHandler('test/test_record1_tmp.mgx', s3_test, False, "./", True)
+        hd = FileHandler(f2, s3_test, False, "./", True)
         if os.path.isfile('./d46a6ae13bea04e1744043f5017f9786.png'):
             os.remove('./d46a6ae13bea04e1744043f5017f9786.png')
         result = hd.process()
@@ -73,7 +90,9 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         hd._clean_file('./d46a6ae13bea04e1744043f5017f9786.png')
 
     def test_save_map(self):
-        with open('test/sample_base64_map.txt', 'r') as f:
+        '''Test saving map.'''
+
+        with open('test/samples/base64_map.txt', 'r') as f:
             base64_str = f.read()
             hd = FileHandler(
                 'test/test_record1.mgx',
@@ -86,15 +105,19 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
             os.remove("testmap.png")
 
 
-# Test record_parser.py
 class TestRecordParser(unittest.TestCase):
+    '''Test record parser.'''
+
     def test_parse(self):
-        result = rp.parse('test/test_record1.mgx')
+        '''Test parsing a record.'''
+
+        result = parse('test/samples/test_record1.mgx')
         self.assertEqual(result['status'], 'perfect')
 
 
-# Test s3_uploader.py
 class TestS3Uploader(unittest.TestCase):
+    '''Test S3Adapter class.'''
+
     def test_upload(self):
         random_uuid = uuid.uuid4()
         random_filename = str(random_uuid) + '.dat'
@@ -102,7 +125,7 @@ class TestS3Uploader(unittest.TestCase):
         ossconn = S3Adapter(*s3_test)
 
         result = ossconn.upload(
-            'test/test_record1.mgx',
+            'test/samples/test_record1.mgx',
             random_filename
         )
         self.assertEqual(result.etag, "5e3b2a7e604f71c8a3793d41f522639c")
@@ -113,30 +136,32 @@ class TestS3Uploader(unittest.TestCase):
         result = ossconn.have(random_filename + 'notexist')
         self.assertFalse(result)
 
-# Test elo_calc.py
 class TestEloCalculator(unittest.TestCase):
+    '''Test EloCalculator class.'''
+
     def setUp(self):
         # Create a new EloCalculator for each test
-        engine = create_engine('sqlite:///test_db2.sqlite3')
+        engine = create_engine('sqlite:///test_db.sqlite3')
         # Create all tables
         Base.metadata.create_all(engine)
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        _Session = sessionmaker(bind=engine)
+        session = _Session()
         self.calculator = EloCalculator(session)
 
     def test_update_ratings(self):
         # Test that update_ratings works correctly
+
         start_time = time.time()
-        self.calculator.update_ratings(batch_size=500000)
+        self.calculator.update_ratings(batch_size=1000000)
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"\r\nCalculation time: {elapsed_time} seconds")
 
-        top_10 = self.calculator._session.query(Ratings).filter(
-            Ratings.version_code == 'AOC10',
-            Ratings.matchup == 'team'
+        top_10 = self.calculator._session.query(Rating).filter(
+            Rating.version_code == 'AOC10',
+            Rating.matchup == 'team'
         ).order_by(
-            Ratings.rating.desc()
+            Rating.rating.desc()
         ).limit(20).all()
         print(f"\r\nTop 20 team ratings for AOC10 team games:")
         for row in top_10:

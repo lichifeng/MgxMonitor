@@ -1,8 +1,6 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,linux
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,visualstudiocode,linux
 
-*.sqlite3
-
 ### Linux ###
 *~
 
@@ -210,3 +208,8 @@ pyrightconfig.json
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,linux
+
+*.sqlite3
+*.sqlite3.zip
+translations/po/
+MgxParser_D_EXE

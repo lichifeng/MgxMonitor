@@ -1,8 +1,12 @@
 '''ORM Model of game data'''
+# pylint: disable=not-callable
+# A fix for pylint false positive error: https://stackoverflow.com/questions/75789383/pylint-func-max-is-not-callable
+
+# pylint: disable=R0903
 
 from sqlalchemy import Column, Integer, String, \
     DateTime, Boolean, SmallInteger, Text, Index, \
-    JSON, DECIMAL, Float, ForeignKey, func, BigInteger
+    JSON, DECIMAL, Float, ForeignKey, func
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import DeclarativeBase
 
@@ -37,10 +41,9 @@ class Game(Base):
     version_save = Column(DECIMAL(10, 2))
     version_scenario = Column(DECIMAL(10, 2))
     victory_type = Column(String(20))
-    source = Column(Text)
     instruction = Column(Text)
     game_time = Column(DateTime)
-    first_found = Column(DateTime) # TODO check this
+    first_found = Column(DateTime)  # TODO check this
 
     players = relationship('Player', back_populates='game')
     files = relationship('File', back_populates='game')
@@ -59,16 +62,18 @@ class Player(Base):
     created = Column(DateTime, server_default=func.now())
     modified = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    game_guid = Column(String(64), ForeignKey('games.game_guid'), nullable=False, index=True)
+    game_guid = Column(String(64), ForeignKey(
+        'games.game_guid'), nullable=False, index=True)
     slot = Column(SmallInteger)
     index_player = Column(SmallInteger)
     name = Column(String(255), index=True, default='<NULL>')
-    name_hash = Column(String(32), index=True, default='3a7ac8a2092fc743e423336f473c7dac') # md5 of <NULL>
+    name_hash = Column(String(32), index=True,
+                       default='3a7ac8a2092fc743e423336f473c7dac')  # md5 of <NULL>
     type = Column(String(20))
     team = Column(SmallInteger)
     color_index = Column(SmallInteger)
-    init_x = Column(SmallInteger)
-    init_y = Column(SmallInteger)
+    init_x = Column(Float)
+    init_y = Column(Float)
     disconnected = Column(Boolean)
     is_winner = Column(Boolean)
     is_main_operator = Column(Boolean)
@@ -80,10 +85,13 @@ class Player(Base):
     resigned_time = Column(Integer)
 
     game = relationship('Game', back_populates='players')
-    files = relationship('File', back_populates='recorder', primaryjoin='Player.slot == foreign(File.recorder_slot) and Player.game_guid == File.game_guid')
-    chat = relationship('Chat', back_populates='recorder', primaryjoin='Player.slot == foreign(Chat.recorder_slot) and Player.game_guid == Chat.game_guid')
+    files = relationship('File', back_populates='recorder',
+                         primaryjoin='Player.slot == foreign(File.recorder_slot) and Player.game_guid == File.game_guid')
+    chat = relationship('Chat', back_populates='recorder',
+                        primaryjoin='Player.slot == foreign(Chat.recorder_slot) and Player.game_guid == Chat.game_guid')
 
     idx_name_game_guid = Index('idx_name_game_guid', name, game_guid)
+
 
 class File(Base):
     '''Record file information.
@@ -99,18 +107,21 @@ class File(Base):
     modified = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     game_guid = Column(String(64), ForeignKey(
-        'games.game_guid'), nullable=False)
+        'games.game_guid'), nullable=False, index=True)
     md5 = Column(String(32), nullable=False)
     parser = Column(String(50))
     parse_time = Column(Float)
     parsed_status = Column(String(50))
     raw_filename = Column(String(255))
-    raw_lastmodified = Column(DateTime) # TODO new MgxParser doesn't have this field
+    # TODO new MgxParser doesn't have this field
+    raw_lastmodified = Column(DateTime)
     notes = Column(Text)
     recorder_slot = Column(SmallInteger)
+    source = Column(Text)
 
     game = relationship('Game', back_populates='files')
-    recorder = relationship('Player', back_populates='files', primaryjoin='foreign(File.recorder_slot) == Player.slot and File.game_guid == Player.game_guid')
+    recorder = relationship('Player', back_populates='files',
+                            primaryjoin='foreign(File.recorder_slot) == Player.slot and File.game_guid == Player.game_guid')
 
 
 class LegacyInfo(Base):
@@ -136,22 +147,27 @@ class Chat(Base):
     Different players may recorded different messages.
     '''
 
-    __tablename__ = 'chat'
+    __tablename__ = 'chats'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     created = Column(DateTime, server_default=func.now())
     modified = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     game_guid = Column(String(64), ForeignKey(
-        'games.game_guid'), nullable=False)
+        'games.game_guid'), nullable=False, index=True)
     recorder_slot = Column(SmallInteger)
     chat_time = Column(Integer)
     chat_content = Column(Text)
 
     game = relationship('Game', back_populates='chats')
-    recorder = relationship('Player', back_populates='chat', primaryjoin='foreign(Chat.recorder_slot) == Player.slot and Chat.game_guid == Player.game_guid')
+    recorder = relationship('Player', back_populates='chat',
+                            primaryjoin='foreign(Chat.recorder_slot) == Player.slot and Chat.game_guid == Player.game_guid')
 
-class Ratings(Base):
+    idx_chat_time_content = Index(
+        'idx_chat_time_content', 'chat_time', 'chat_content')
+
+
+class Rating(Base):
     '''Ratings information.
 
     Ratings information for each player.
@@ -173,10 +189,3 @@ class Ratings(Base):
     lowest = Column(Integer)
     first_played = Column(DateTime)
     last_played = Column(DateTime)
-
-# Create indexes
-# Index('idx_game_guid', Game.game_guid)
-# Index('idx_name', Player.name)
-# Index('idx_created', Game.created)
-# Index('idx_player_guid', Player.game_guid)
-# Index('idx_name_game_guid', Player.name, Player.game_guid)

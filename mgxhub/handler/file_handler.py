@@ -1,4 +1,5 @@
 '''Used to handle the file uploaded or found in monitored directory.'''
+# pylint: disable=R0903
 
 import os
 import asyncio
@@ -10,8 +11,8 @@ from datetime import datetime
 from io import BytesIO
 import patoolib
 from PIL import Image
-from record_parser import parse
-from s3_adapter import S3Adapter
+from mgxhub.parser import parse
+from mgxhub.storage import S3Adapter
 
 
 class FileHandler:
@@ -223,7 +224,7 @@ class FileHandler:
         Returns:
             str: The result of the saving.
         '''
-
+        # TODO
         pass
 
     async def _save_to_s3(

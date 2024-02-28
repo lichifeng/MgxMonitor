@@ -14,7 +14,7 @@ from pymongo import MongoClient
 from bson import ObjectId
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
-from orm_models import Base, Game, Player, File, Chat, LegacyInfo
+from mgxhub.model.orm import Base, Game, Player, File, Chat, LegacyInfo
 
 
 # Set up logging
@@ -70,7 +70,7 @@ def insert_game_data(doc, session):
                 doc.get('guid'),
                 player.get('slot'),
                 player.get('index'),
-                player.get('name'),
+                player.get('name', '<EMPTY>'),
                 player.get('type'),
                 player.get('team'),
                 player.get('colorIndex'),

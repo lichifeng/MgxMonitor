@@ -1,7 +1,7 @@
 '''
-用于解析游戏存档的模块。
+调用MgxParser可执行文件解析帝国时代II游戏存档。
 
-这是一个内部调用的模板，传入的文件应该是已经被解压并验证过后缀名的帝国时代2游戏存档文件。
+传入的文件应该是已经被解压并验证过后缀名的帝国时代2游戏存档文件。
 常见的后缀名是：['.mgx', '.mgx2', '.mgz', '.mgl', '.msx', '.msx2', '.aoe2record']
 '''
 
@@ -9,7 +9,10 @@ import json
 import os
 import subprocess
 
-PARSER_PATH = os.environ.get('PARSER_PATH', './MgxParser_D_EXE')
+current_file_path = os.path.abspath(__file__)
+current_dir = os.path.dirname(current_file_path)
+default_parser_path = os.path.join(current_dir, 'MgxParser_D_EXE')
+PARSER_PATH = os.environ.get('PARSER_PATH', default_parser_path)
 
 
 def parse(file_path: str, opts: str = '') -> dict:

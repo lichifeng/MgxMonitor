@@ -1,11 +1,17 @@
-'''Used to calculate ELO ratings.'''
+'''Used to calculate ELO ratings.
+If used as a script, run it as a module with the following command:
+```bash
+python -m mgxhub.rating.calculator
+```
+'''
+
 from numbers import Number
 import math
 from statistics import fmean
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, Query
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import text, and_
-from orm_models import Ratings, Player, Game
+from mgxhub.model.orm import Rating, Player, Game
 
 
 class EloCalculator:
@@ -39,9 +45,9 @@ class EloCalculator:
         '''Calculate the Probability of Winning.'''
         return 1.0 * 1.0 / (1 + 1.0 * math.pow(10, 1.0 * (rating_winner - rating_loser) / 400))
 
-    def _fetch_in_batches(self, query, batch_size: int | None = None):
+    def _fetch_in_batches(self, query: Query, batch_size: int | None = None):
         '''Fetch the query results in batches.'''
-        
+
         if batch_size is None:
             # If batch_size is None, fetch all results at once
             yield from query.all()
@@ -61,8 +67,8 @@ class EloCalculator:
         # First check if there are duplicate names in the winners or losers, skip them
         # nh is short for name_hash
         if \
-            len([nh for nh, _ in self._winners_cache]) != len(set(nh for nh, _  in self._winners_cache)) \
-                or len([nh for nh, _  in self._losers_cache]) != len(set(nh for nh, _  in self._losers_cache)):
+            len([nh for nh, _ in self._winners_cache]) != len(set(nh for nh, _ in self._winners_cache)) \
+                or len([nh for nh, _ in self._losers_cache]) != len(set(nh for nh, _ in self._losers_cache)):
             pass
         elif len(self._winners_cache) == 0 or len(self._losers_cache) == 0:
             pass
@@ -72,20 +78,11 @@ class EloCalculator:
                                    for nh, _ in self._winners_cache])
             rating_loser = fmean([col[nh]["rating"]
                                   for nh, _ in self._losers_cache])
-            
-            # if rating_winner or rating_loser < 1000 or > 3000, print all the ratings of winners and losers
-            if rating_winner < 500 or rating_winner > 4000 or rating_loser < 500 or rating_loser > 4000:
-                print(f"rating_winner: {rating_winner}, rating_loser: {rating_loser}")
-                for nh, _ in self._winners_cache:
-                    print(f"winner: {nh}: {col[nh]['rating']}")
-                for nh, _ in self._losers_cache:
-                    print(f"loser: {nh}: {col[nh]['rating']}")
-                exit()
 
             # Calculate the new Elo rating delta for the winner and loser
             delta_winner, delta_loser = self._calc_rating_delta(
                 rating_winner, rating_loser)
-            
+
             # Update the ratings cache
             for _, p in self._winners_cache:
                 p["rating"] += delta_winner
@@ -101,48 +98,38 @@ class EloCalculator:
                 p["lowest"] = min(p["rating"], p["lowest"])
                 p["streak"] = 0
 
-    def _generate_rating_cache(self, duration_threshhold: int = 15 * 60 * 1000, batch_size: int | None = None) -> None:
+    def _generate_rating_cache(self, duration_threshold: int = 15 * 60 * 1000, batch_size: int | None = None) -> None:
         '''Generate the ratings cache.'''
-        # sql = text(f"""
-        #     SELECT players.game_guid,
-        #            games.version_code,
-        #            games.matchup,
-        #            players.name AS name_hash,
-        #            players.is_winner,
-        #            games.game_time
-        #     FROM players
-        #     JOIN games ON players.game_guid = games.game_guid
-        #     WHERE games.duration > {duration_threshhold} and games.is_multiplayer = 1 and games.include_ai = 0
-        #     ORDER BY games.game_time, players.game_guid, players.is_winner
-        # """)  # TODO fix name_hash line
 
         query = self._session.query(
             Player.game_guid,
             Game.version_code,
             Game.matchup,
-            Player.name.label('name_hash'),
+            Player.name_hash,
             Player.is_winner,
             Game.game_time
         ).join(
             Game, Player.game_guid == Game.game_guid
         ).filter(
-            and_(Game.duration > duration_threshhold, Game.is_multiplayer == 1, Game.include_ai == 0, Player.is_main_operator == 1)
+            and_(Game.duration > duration_threshold, 
+                 Game.is_multiplayer == 1, Game.include_ai == 0, Player.is_main_operator == 1)
         ).order_by(
             Game.game_time, Player.game_guid, Player.is_winner
         )
 
         i = 0
+        col = {}
         # Execute the query in batches
         for row in self._fetch_in_batches(query, batch_size):
             game_guid, version_code, matchup, name_hash, is_winner, game_time = row
 
             if self._current_game_guid is None:
                 self._current_game_guid = game_guid
-                
+
             if game_guid != self._current_game_guid:
                 # Update the ratings for the previous game
                 self._update_game_ratings(col)
-                print(f"[{i}] {self._current_game_guid}")
+                # print(f"[{i}] {self._current_game_guid}")
                 i += 1
 
                 # Reset the winners and losers for the next game
@@ -184,20 +171,21 @@ class EloCalculator:
         self._winners_cache.clear()
         self._losers_cache.clear()
 
-    def update_ratings(self, duration_threshhold: int = 15 * 60 * 1000, batch_size: int | None = None):
+    def update_ratings(self, duration_threshold: int = 15 * 60 * 1000, batch_size: int | None = None):
         '''Update the ratings table.'''
 
-        self._generate_rating_cache(duration_threshhold, batch_size)
+        self._generate_rating_cache(duration_threshold, batch_size)
 
         # Clear the existing Ratings table
-        self._session.query(Ratings).delete()
+        self._session.query(Rating).delete()
 
         # Reset auto increment value (example for MySQL)
         # self._session.execute(text("ALTER TABLE ratings AUTO_INCREMENT = 1"))
 
         # For SQLite, you can use:
         try:
-            self._session.execute(text("UPDATE sqlite_sequence SET seq = 0 WHERE name='ratings'"))
+            self._session.execute(
+                text("UPDATE sqlite_sequence SET seq = 0 WHERE name='ratings'"))
         except OperationalError:
             pass  # Ignore the error if sqlite_sequence table does not exist
 
@@ -223,7 +211,7 @@ class EloCalculator:
                         'last_played': player["last_played"]
                     })
 
-        self._session.bulk_insert_mappings(Ratings, mappings)
+        self._session.bulk_insert_mappings(Rating, mappings)
 
         # Commit the changes
         self._session.commit()
