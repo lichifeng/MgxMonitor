@@ -6,7 +6,7 @@
 
 from sqlalchemy import Column, Integer, String, \
     DateTime, Boolean, SmallInteger, Text, Index, \
-    JSON, DECIMAL, Float, ForeignKey, func
+    JSON, DECIMAL, Float, ForeignKey, func, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import DeclarativeBase
 
@@ -43,7 +43,9 @@ class Game(Base):
     victory_type = Column(String(20))
     instruction = Column(Text)
     game_time = Column(DateTime)
-    first_found = Column(DateTime)  # TODO check this
+    # first_found = Column(DateTime)  # use created instead
+    # 0: public, higher number means more private
+    visibility = Column(SmallInteger, default=0)
 
     players = relationship('Player', back_populates='game')
     files = relationship('File', back_populates='game')
@@ -87,8 +89,8 @@ class Player(Base):
     game = relationship('Game', back_populates='players')
     files = relationship('File', back_populates='recorder',
                          primaryjoin='Player.slot == foreign(File.recorder_slot) and Player.game_guid == File.game_guid')
-    chat = relationship('Chat', back_populates='recorder',
-                        primaryjoin='Player.slot == foreign(Chat.recorder_slot) and Player.game_guid == Chat.game_guid')
+    # chat = relationship('Chat', back_populates='recorder',
+    #                     primaryjoin='Player.slot == foreign(Chat.recorder_slot) and Player.game_guid == Chat.game_guid')
 
     idx_name_game_guid = Index('idx_name_game_guid', name, game_guid)
 
@@ -113,7 +115,6 @@ class File(Base):
     parse_time = Column(Float)
     parsed_status = Column(String(50))
     raw_filename = Column(String(255))
-    # TODO new MgxParser doesn't have this field
     raw_lastmodified = Column(DateTime)
     notes = Column(Text)
     recorder_slot = Column(SmallInteger)
@@ -148,6 +149,8 @@ class Chat(Base):
     '''
 
     __tablename__ = 'chats'
+    __table_args__ = (UniqueConstraint('game_guid', 'chat_time',
+                      'chat_content', name='_unique_chat_uc'),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     created = Column(DateTime, server_default=func.now())
@@ -155,13 +158,13 @@ class Chat(Base):
 
     game_guid = Column(String(64), ForeignKey(
         'games.game_guid'), nullable=False, index=True)
-    recorder_slot = Column(SmallInteger)
+    # recorder_slot = Column(SmallInteger)
     chat_time = Column(Integer)
     chat_content = Column(Text)
 
     game = relationship('Game', back_populates='chats')
-    recorder = relationship('Player', back_populates='chat',
-                            primaryjoin='foreign(Chat.recorder_slot) == Player.slot and Chat.game_guid == Player.game_guid')
+    # recorder = relationship('Player', back_populates='chat',
+    #                         primaryjoin='foreign(Chat.recorder_slot) == Player.slot and Chat.game_guid == Player.game_guid')
 
     idx_chat_time_content = Index(
         'idx_chat_time_content', 'chat_time', 'chat_content')

@@ -7,13 +7,15 @@ from shutil import copyfile
 from time import sleep
 import asyncio
 import unittest
+import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from mgxhub.rating import EloCalculator
-from mgxhub.model.orm import Rating, Base
+from mgxhub.model.orm import Rating, Base, Chat
 from mgxhub.parser import parse
 from mgxhub.handler import FileHandler
 from mgxhub.storage import S3Adapter
+from mgxhub.handler import DBHandler
 
 s3_test = [
     "play.min.io",
@@ -52,8 +54,10 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         elapsed_time = end_time - start_time
         print(f"\r\nElapsed time: {elapsed_time} seconds")
 
-        self.assertTrue(ossconn.have('/records/7ce24dd2608dec17d85d48c781853997.zip'))
-        self.assertTrue(ossconn.have('/records/717cd3fc274a200ba81a2cc2cc65c288.zip'))
+        self.assertTrue(ossconn.have(
+            '/records/7ce24dd2608dec17d85d48c781853997.zip'))
+        self.assertTrue(ossconn.have(
+            '/records/717cd3fc274a200ba81a2cc2cc65c288.zip'))
 
     def test_handle_record_async(self):
         '''Test file uploading process with async.'''
@@ -63,7 +67,8 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         test_obj1 = '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'
         ossconn = S3Adapter(*s3_test)
         ossconn.remove_object(test_obj1)
-        self.assertFalse(ossconn.have('/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
+        self.assertFalse(ossconn.have(
+            '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
 
         script_path = os.path.abspath(__file__)
         script_dir = os.path.dirname(script_path)
@@ -81,12 +86,14 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         elapsed_time = end_time - start_time
         print(f"\r\nElapsed time: {elapsed_time} seconds")
 
-        self.assertFalse(ossconn.have('/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
+        self.assertFalse(ossconn.have(
+            '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
         for _ in range(10):
             if ossconn.have('/records/5e3b2a7e604f71c8a3793d41f522639c.zip') and os.path.isfile('./d46a6ae13bea04e1744043f5017f9786.png'):
                 break
             sleep(1)
-        self.assertTrue(ossconn.have('/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
+        self.assertTrue(ossconn.have(
+            '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
         hd._clean_file('./d46a6ae13bea04e1744043f5017f9786.png')
 
     def test_save_map(self):
@@ -136,6 +143,7 @@ class TestS3Uploader(unittest.TestCase):
         result = ossconn.have(random_filename + 'notexist')
         self.assertFalse(result)
 
+
 class TestEloCalculator(unittest.TestCase):
     '''Test EloCalculator class.'''
 
@@ -165,7 +173,56 @@ class TestEloCalculator(unittest.TestCase):
         ).limit(20).all()
         print(f"\r\nTop 20 team ratings for AOC10 team games:")
         for row in top_10:
-            print(f"[{row.id}] {row.name_hash}: {row.rating} wins: {row.wins} total: {row.total} highest: {row.highest} lowest: {row.lowest} streak: {row.streak}/{row.streak_max} first_played: {row.first_played} last_played: {row.last_played}")
+            print(f"[{row.id}] {row.name_hash}: {row.rating} wins: {row.wins} total: {row.total} highest: {row.highest} lowest: {
+                  row.lowest} streak: {row.streak}/{row.streak_max} first_played: {row.first_played} last_played: {row.last_played}")
+
+
+class TestRecordCRUD(unittest.TestCase):
+    '''Test record CRUD operations.'''
+
+    def test_crud(self):
+        '''Test record CRUD operations.'''
+
+        try:
+            os.remove("test_db_new_insert.sqlite3")
+        except FileNotFoundError:
+            pass
+        dbh = DBHandler("test_db_new_insert.sqlite3")
+
+        # INSERTATION
+        # load test/samples/parsed_data_zip.json and parsed the json string into
+        # a dict as test data
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        file_path = os.path.join(script_dir, 'samples', 'parsed_data.json')
+
+        with open(file_path, 'r', encoding="utf-8") as f:
+            data = json.load(f)
+            result = dbh.add_game(data)
+            print(f"\r\nGuid of test game: {data["guid"]}")
+            self.assertEqual(result[0], 'success')
+            print(f"Game inserted, guid: {result[1]}")
+            data["duration"] += 1
+            result = dbh.add_game(data)
+            self.assertEqual(result[0], 'updated')
+            print(f"Game updated, guid: {result[1]}")
+            data["duration"] -= 1
+            result = dbh.add_game(data)
+            self.assertEqual(result[0], 'exists')
+            print(f"Game exists, guid: {result[1]}")
+
+        # RETRIEVAL
+        # retrieve the game from the database
+        game = dbh.get_game(data["guid"])
+        self.assertEqual(game.guid, data["guid"])
+        print(f"Game retrieved, guid: {game.guid}")
+
+        # DELETION
+        # delete the game and related chats, players, legacy_info, etc.
+        result = dbh.delete_game(data["guid"])
+        self.assertEqual(result, True)
+        game = dbh.get_game(data["guid"])
+        self.assertEqual(game, None)
+        print(f"Game deleted, guid: {data["guid"]}")
 
 
 if __name__ == '__main__':

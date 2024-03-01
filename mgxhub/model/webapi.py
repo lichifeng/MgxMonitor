@@ -47,7 +47,7 @@ class PlayerInGame(BaseModel):
 
 class ChatEntry(BaseModel):
     '''Chat entry in a game.
-    
+
     Chat records in lobby have `sent_time` value of 0.
 
     - **sent_time**: In-game time when the chat was sent. Avoid using `time` as field name.
@@ -63,7 +63,6 @@ class GameDetail(BaseModel):
 
     guid: str
     game_time: datetime | None
-    first_found: datetime
     version_code: str | None
     version_log: int | None
     version_raw: str | None
@@ -96,14 +95,15 @@ class GameDetail(BaseModel):
             GameDetail: Return the instance itself with data loaded.
         '''
 
-        # if translations/<lang>.po exists, use it
-        t = gettext.translation(lang, localedir='translations', fallback=True)
+        # if translations/en/LC_MESSAGES/<lang>.mo exists, use it
+        # print(gettext.find(lang, 'translations', languages=["en"], all=True))
+        t = gettext.translation(lang, localedir='translations',
+                                languages=["en"], fallback=True)
         _ = t.gettext
 
         super().__init__(
             guid=g.game_guid,
             game_time=g.game_time,
-            first_found=g.first_found,
             version_code=g.version_code,
             version_log=g.version_log,
             version_raw=g.version_raw,

@@ -12,10 +12,10 @@ from . import EloCalculator
 if __name__ == "__main__":
     # Check if the lock file exists, other processes can read the RATING_CALC_LOCK_FILE environment variable to get the lock file path
     LOCK_FILE = os.getenv('RATING_CALC_LOCK_FILE',
+                          # NOTE This default value is hardcoded in the RatingLock class
                           "/tmp/mgxhub_elo_calc_process.lock")
-    if not os.path.exists(LOCK_FILE):
-        os.environ['RATING_CALC_LOCK_FILE'] = LOCK_FILE
-    else:
+
+    if os.path.exists(LOCK_FILE):
         print("Only one instance of the ELO rating calculator can run at a time. Exiting.")
         sys.exit(1)
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         parser.add_argument('--duration_threshold', default=os.getenv(
             'RATING_DURATION_THRESHOLD', 15 * 60 * 1000), help='Duration threshold for ELO rating update')
         parser.add_argument('--batch_size', default=os.getenv(
-            'RATING_CALC_BATCH_SIZE', 100000), help='Batch size for ELO rating update')
+            'RATING_CALC_BATCH_SIZE', 150000), help='Batch size for ELO rating update')
         args = parser.parse_args()
 
         engine = create_engine(f"sqlite:///{args.db_path}", echo=False)

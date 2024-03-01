@@ -13,6 +13,7 @@ import patoolib
 from PIL import Image
 from mgxhub.parser import parse
 from mgxhub.storage import S3Adapter
+from .db_handler import DBHandler
 
 
 class FileHandler:
@@ -47,13 +48,16 @@ class FileHandler:
 
     _delete_after = False
 
+    _db_handler = None
+
     def __init__(
             self,
             file_path: str,
             s3_creds: list = None,
             s3_replace: bool = False,
             map_dir: str = "",
-            delete_after: bool = False
+            delete_after: bool = False,
+            db_handler: DBHandler = None
     ):
         '''Initialize the FileHandler.'''
 
@@ -61,6 +65,7 @@ class FileHandler:
         self._set_current_file(file_path)
         self._file_extension = self._current_extension
         self._delete_after = delete_after
+        self._db_handler = db_handler
 
         if not os.path.isdir(map_dir):
             self._map_dir = os.environ.get('MAP_DIR')
@@ -79,7 +84,7 @@ class FileHandler:
 
         if not self._delete_after:
             return
-        
+
         if file_path:
             self._set_current_file(file_path)
 
@@ -153,9 +158,10 @@ class FileHandler:
         tasks = []
 
         if 'map' in parsed_result and 'base64' in parsed_result['map'] and self._map_dir:
-            tasks.append(self._save_map(parsed_result['guid'], parsed_result['map']['base64']))
+            tasks.append(self._save_map(
+                parsed_result['guid'], parsed_result['map']['base64']))
 
-        tasks.append(self._save_to_db(parsed_result))
+        tasks.append(self._save_to_db(parsed_result, self._db_handler))
 
         if self._s3_conn:
             try:
@@ -171,7 +177,7 @@ class FileHandler:
             threading.Thread(target=self._slow_tasks, args=(tasks,)).start()
         else:
             self._slow_tasks(tasks)
-            
+
         ############### Asyncable Procedures End ###################
         ############################################################
 
@@ -215,7 +221,7 @@ class FileHandler:
 
         return {'status': 'success', 'message': 'compressed file was scaduled for processing'}
 
-    async def _save_to_db(self, data: dict) -> str:
+    async def _save_to_db(self, data: dict, db: DBHandler) -> tuple[str, str]:
         '''Save the parsed data to the database.
 
         Args:
@@ -224,8 +230,12 @@ class FileHandler:
         Returns:
             str: The result of the saving.
         '''
-        # TODO
-        pass
+        if not db:
+            return 'error', 'DBHandler not set'
+        try:
+            return db.add_game(data)
+        except Exception as e:
+            return 'error', str(e)
 
     async def _save_to_s3(
         self,
@@ -262,10 +272,12 @@ class FileHandler:
                     matchup = 'UNKNOWN'
                 current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 if 'gameTime' in data and isinstance(data['gameTime'], int):
-                    played_at = datetime.fromtimestamp(data['gameTime']).strftime('%Y-%m-%d %H:%M:%S')
+                    played_at = datetime.fromtimestamp(
+                        data['gameTime']).strftime('%Y-%m-%d %H:%M:%S')
                 else:
                     played_at = current_time
-                packed_name = f"{version_code}_{matchup}_{data['md5'][:5]}{data['fileext']}"
+                packed_name = f"{version_code}_{matchup}_{
+                    data['md5'][:5]}{data['fileext']}"
                 comment_template = f'''
 Age of Empires II record
 
