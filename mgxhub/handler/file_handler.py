@@ -51,6 +51,7 @@ class FileHandler:
 
     _db_handler = None
 
+
     def __init__(
             self,
             file_path: str,
@@ -79,9 +80,14 @@ class FileHandler:
             except Exception as e:
                 print(f'Failed to connect to S3: {e}')
         self._s3_replace = s3_replace
+        print(f"Passed to FileHandler: {file_path}")
+
 
     def _clean_file(self, file_path: str | None = None) -> None:
         '''Delete the file if it exists and delete_after is set to True.'''
+
+        # print("Function _clean_file was called from:")
+        # traceback.print_stack(limit=2)  # limit=2 will print the caller and the line that called this function
 
         if not self._delete_after:
             return
@@ -89,7 +95,9 @@ class FileHandler:
         if file_path:
             self._set_current_file(file_path)
 
+        print(f'Try cleaning file: {file_path}')
         if not self._current_file or not os.path.isfile(self._current_file):
+            print(f'File not found when cleaning: {file_path}')
             return
 
         os.remove(self._current_file)
@@ -97,17 +105,19 @@ class FileHandler:
         # This part is kind of dirty, referring to a variable possibly defined
         # in some inherited class??
         # See ./file_obj_handler.py
-        print(f'Cleaning file: {file_path}')
         tmpdir_from_child = getattr(self, '_tmpdir', None)
         if tmpdir_from_child and os.path.isdir(tmpdir_from_child):
+            print(f'Cleaning upload dir: {tmpdir_from_child}')
             shutil.rmtree(tmpdir_from_child)
             return
+
 
     def _set_current_file(self, file_path: str) -> None:
         '''Set the current file and its extension.'''
 
         self._current_file = file_path
         self._current_extension = file_path.split('.')[-1].lower()
+
 
     def process(self, file_path: str | None = None) -> dict:
         '''Start processing the file and return the result.
@@ -124,14 +134,48 @@ class FileHandler:
 
         if self._current_extension in self.ACCEPTED_RECORD_TYPES:
             async_run = self._current_file == self._file_path
-            print(f'Processing {self._current_file} async: {async_run}')
+            print(f'Async: {async_run}, Processing: {self._current_file}')
             return self._process_record(self._current_file, async_run=async_run, opts='-b')
 
         if self._current_extension in self.ACCEPTED_COMPRESSED_TYPES:
+            print(f'Processing compressed: {self._current_file}')
             return self._process_compressed(self._current_file)
 
         self._clean_file()
         return {'status': 'invalid', 'message': 'unsupported file type'}
+
+    # NOTICE:
+    # THE EXAMPLE BELOW FAILED, WAS LEFT FOR FUTURE REFERENCE
+    #
+    # def _slow_tasks(self, tasks):
+    #     '''Run the slow tasks asynchronously.
+        
+    #     _slow_tasks 函数会使用 asyncio 的事件循环来并发地运行多个任务。这些任务
+    #     会在同一个线程中并发运行，而不是在新的线程中运行。这是因为 asyncio 是基
+    #     于单线程的协程模型，它使用事件循环来调度任务，而不是创建新的线
+    #     程。_slow_tasks 函数本身是一个阻塞函数，它会阻塞调用它的线程，直到所有的
+    #     任务都完成。这是因为 loop.run_until_complete(asyncio.gather(*tasks)) 会
+    #     阻塞当前线程，直到所有的任务都完成。所以，_slow_tasks 函数会在同一个线程
+    #     中并发地运行多个任务，并且会阻塞调用它的线程，直到所有的任务都完成。这
+    #     样，你可以在 _slow_tasks 函数返回后，确保所有的任务都已经完成。
+    #     '''
+        
+    #     loop_found = False
+    #     try:
+    #         loop = asyncio.get_running_loop()
+    #         loop_found = True
+    #     except RuntimeError:
+    #         loop = asyncio.new_event_loop()
+    #         asyncio.set_event_loop(loop)
+            
+    #     try:
+    #         loop.run_until_complete(asyncio.gather(*tasks))
+    #     except Exception as e:
+    #         print(f'Error in slow tasks: {e}')
+    #     finally:
+    #         if not loop_found:
+    #             loop.close()
+
 
     def _slow_tasks(self, tasks):
         loop = asyncio.new_event_loop()
@@ -140,6 +184,7 @@ class FileHandler:
             loop.run_until_complete(asyncio.gather(*tasks))
         finally:
             loop.close()
+            
 
     def _process_record(self, record_path: str, async_run: bool = False, opts: str = '') -> dict:
         '''Process the record file and return the result.
@@ -178,19 +223,43 @@ class FileHandler:
                 # TODO log the error and move the file to error directory
                 pass
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # Me:
+        # 为什么我在对这个类单独测试时没有找到消息循环，但是通过fastapi调用的时候能找到？
+        
+        # Copilot:
+        # 这是因为FastAPI在内部使用了Starlette，Starlette在启动时会创建一个事件循
+        # 环，并在整个应用的生命周期中运行这个事件循环。当你通过FastAPI调用你的代
+        # 码时，你的代码就在这个事件循环中运行，所以`asyncio.get_running_loop()`能
+        # 够找到一个正在运行的事件循环。然而，当你单独测试你的类时，如果你没有手动
+        # 创建一个事件循环，那么`asyncio.get_running_loop()`就无法找到一个正在运行
+        # 的事件循环，因为默认情况下，Python的主线程不会创建事件循环。
+        # try:
+        #     loop = asyncio.get_running_loop()
+        #     print('Running loop found')
+        # except RuntimeError:
+        #     print('No running loop')
 
-        if async_run:
-            threading.Thread(target=self._slow_tasks, args=(tasks,)).start()
-        else:
-            self._slow_tasks(tasks)
+        # NOTICE:
+        # THE EXAMPLE BELOW FAILED, WAS LEFT FOR FUTURE REFERENCE
+        #
+        # if async_run:
+        #     threading.Thread(target=self._slow_tasks, args=(tasks,)).start()
+        # else:
+        #     self._slow_tasks(tasks)
+            
+        slow_tasks_thd = threading.Thread(target=self._slow_tasks, args=(tasks,))
+        slow_tasks_thd.start()
+        if not async_run:
+            print('Waiting 100s for slow tasks')
+            slow_tasks_thd.join(100)
 
         ############### Asyncable Procedures End ###################
         ############################################################
-
+        
+        print("Leaving asyncable procedures")
         self._valid_count += 1
         return parsed_result
+
 
     def _process_directory(self, dir_path: str) -> None:
         '''Process the directory and its files recursively.
@@ -205,6 +274,7 @@ class FileHandler:
             for inner_dir in dirs:
                 inner_path = os.path.join(root, inner_dir)
                 self._process_directory(inner_path)
+
 
     def _process_compressed(self, zip_path: str) -> dict:
         '''Extract the compressed file and process the files inside.
@@ -226,8 +296,10 @@ class FileHandler:
 
             self._process_directory(temp_dir)
             self._clean_file(zip_path)
+        print(f"Left unzipped temp_dir scope.")
 
         return {'status': 'success', 'message': 'compressed file was scaduled for processing'}
+
 
     async def _save_to_db(self, data: dict, db: DBHandler) -> tuple[str, str]:
         '''Save the parsed data to the database.
@@ -239,11 +311,16 @@ class FileHandler:
             str: The result of the saving.
         '''
         if not db:
-            return 'error', 'DBHandler not set'
-        try:
-            return db.add_game(data)
-        except Exception as e:
-            return 'error', str(e)
+            result = 'error', 'DBHandler not set'
+        else:
+            try:
+                result = db.add_game(data)
+            except Exception as e:
+                result = 'error', str(e)
+
+        print(f"DB result: {result}")
+        return result
+
 
     async def _save_to_s3(
         self,
@@ -266,7 +343,7 @@ class FileHandler:
 
         if self._s3_conn.have(self.OSS_RECORD_DIR + data['md5'] + '.zip') and not self._s3_replace:
             self._clean_file(record_path)
-            print('file exists')
+            print('OSS: File exists')
             return 'OSS_FILE_EXISTS'
 
         with tempfile.TemporaryFile(suffix='.zip') as temp_file:
@@ -306,13 +383,14 @@ Packed at {current_time}
             try:
                 result = self._s3_conn.upload(
                     temp_file, self.OSS_RECORD_DIR + data['md5'] + '.zip')
-                print('Uploaded: ' + result.object_name)
-                print('MD5: ' + result.etag)
+                print('OSS uploaded: ' + result.object_name + ' ' + result.etag)
                 self._clean_file(record_path)
                 return 'OSS_UPLOAD_SUCCESS'
             except Exception as e:
                 # TODO log the error and move the file to error directory
+                print(f'OSS upload error: {e}')
                 return 'OSS_UPLOAD_ERROR'
+
 
     async def _save_map(self, basename: str, base64_str: str) -> str:
         '''Save the map image to the directory.

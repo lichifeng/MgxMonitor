@@ -51,7 +51,7 @@ class FileObjHandler(FileHandler):
 
         # Change creation time and last modified time of the file
         os.utime(recfile, (lastmod_obj.timestamp(), lastmod_obj.timestamp()))
-        print(f"Temp file: {recfile}")
+        print(f"File uploaded, save to: {recfile}")
 
         super().__init__(recfile, **handler_opts)
 

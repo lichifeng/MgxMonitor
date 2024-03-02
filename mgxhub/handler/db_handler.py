@@ -91,9 +91,14 @@ class DBHandler:
         '''
         game = self.session.query(Game).filter(
             Game.game_guid == d.get('guid')).first()
-        if game:
-            if isinstance(game.duration, (int, float)) and game.duration > d.get('duration'):
+        if game and isinstance(game.duration, (int, float)):
+            if game.duration > d.get('duration'):
                 return "exists", game.game_guid
+            if game.duration == d.get('duration'):
+                same_file = self.session.query(File).filter(
+                    File.md5 == d.get('md5')).first()
+                if same_file:
+                    return "duplicated", game.game_guid
 
         if not d.get('guid'):
             return "invalid", "missing guid"
