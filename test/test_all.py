@@ -11,7 +11,7 @@ import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from mgxhub.rating import EloCalculator
-from mgxhub.model.orm import Rating, Base, Chat
+from mgxhub.model.orm import Rating, Base
 from mgxhub.parser import parse
 from mgxhub.handler import FileHandler
 from mgxhub.storage import S3Adapter
@@ -21,6 +21,7 @@ s3_test = [
     "play.min.io",
     "Q3AM3UQ867SPQQA43P2F",
     "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
+    "us-east-1",
     "aocrec-test-bucket"
 ]
 

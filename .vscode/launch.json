@@ -17,6 +17,22 @@
       "request": "launch",
       "module": "mgxhub.rating",
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Test server",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "main:app",
+        "--reload",
+        "--port",
+        "8080",
+        "--host",
+        "0.0.0.0"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
     }
   ]
 }

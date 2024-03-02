@@ -24,15 +24,19 @@ class S3Adapter:
     _endpoint = None
     _access_key = None
     _secret_key = None
+    _region = None
     _bucket_name = None
+    _virtual_host_style = False
     _client = None
+
 
     def __init__(
             self,
             endpoint: str = None,
             access_key: str = None,
             secret_key: str = None,
-            bucket_name: str = None
+            region: str | None = None,
+            bucket_name: str | None = None
     ):
         self._endpoint = endpoint if endpoint else os.environ.get(
             'S3_ENDPOINT')
@@ -40,6 +44,10 @@ class S3Adapter:
             'S3_ACCESS_KEY')
         self._secret_key = secret_key if secret_key else os.environ.get(
             'S3_SECRET_KEY')
+        self._region = region if region else os.environ.get(
+            'S3_REGION')
+        self._bucket_name = bucket_name if bucket_name else os.environ.get(
+            'S3_BUCKET')
 
         if not self._endpoint or not self._access_key or not self._secret_key:
             raise ValueError(
@@ -47,27 +55,26 @@ class S3Adapter:
 
         self._client = Minio(self._endpoint,
                              access_key=self._access_key,
-                             secret_key=self._secret_key
+                             secret_key=self._secret_key,
+                             region=self._region
                              )
-        self.bucket = bucket_name if bucket_name else os.environ.get(
-            'S3_BUCKET')
+        self.set_bucket()
+
 
     @property
     def bucket(self) -> str:
         '''The bucket name to be used'''
 
         return self._bucket_name
+    
 
-    @bucket.setter
-    def bucket(self, name: str) -> None:
-        if name:
-            self._bucket_name = name
-        elif os.environ.get('S3_BUCKET'):
-            self._bucket_name = os.environ.get('S3_BUCKET')
-        elif self._bucket_name:
-            pass
-        else:
-            raise ValueError('Missing S3 bucket name')
+    def set_bucket(self) -> None:
+        '''Set the bucket policy to public read'''
+
+        # if self.bucket is blank string, use part before the first dot of endpoint as bucket name
+        if not self._bucket_name:
+            self._bucket_name = self._endpoint.split('.')[0]
+            self._virtual_host_style = True
 
         _public_read_policy = {
             "Version": '2012-10-17',
@@ -88,6 +95,7 @@ class S3Adapter:
         self._client.set_bucket_policy(
             self._bucket_name, json.dumps(_public_read_policy))
 
+
     def have(self, file_path: str) -> bool:
         '''Check if a file exists in the server.
 
@@ -100,12 +108,10 @@ class S3Adapter:
 
         try:
             result = self._client.stat_object(self._bucket_name, file_path)
-            if result.etag:
-                return True
-            else:
-                return False
+            return bool(result.etag)
         except Exception as e:
             return False
+
 
     def upload(self, source_file: str | IOBase, dest_file: str) -> ObjectWriteResult:
         '''Upload a file to the server.
@@ -129,6 +135,7 @@ class S3Adapter:
             return self._client.put_object(
                 self._bucket_name, dest_file, source_file, length=size
             )
+
 
     def remove_object(self, file_path: str) -> None:
         '''Remove a file from the server.

@@ -52,7 +52,11 @@ class RatingLock:
         return os.path.exists(self._lock_file)
 
     def pid_exists(self) -> bool:
-        """Check if the PID exists in the system."""
+        """Check if the PID exists in the system.
+        
+        Reference:
+            https://stackoverflow.com/questions/568271/how-to-check-if-there-exists-a-process-with-a-given-pid-in-python
+        """
 
         if self.pid is None:
             return False
@@ -99,7 +103,15 @@ class RatingLock:
                 pass
 
     def terminate_process(self):
-        """Terminate the process with the PID in the lock file."""
+        """Terminate the process with the PID in the lock file.
+        
+        `os.waitpid` 函数用于等待子进程结束，并返回子进程的退出状态。
+        如果不调用 `os.waitpid`，那么即使子进程已经结束，它仍然会在系
+        统中以僵尸进程的形式存在，直到父进程调用 `waitpid` 或结束。这
+        可能会导致资源泄漏。代码创建了子进程，并且希望在子进程结束时进
+        行一些清理工作，就应该调用 `os.waitpid`。如果代码没有创建子进
+        程，或者不关心子进程的退出状态，那不需要。
+        """
 
         if self.pid and self.pid_exists():
             os.kill(self.pid, signal.SIGTERM)

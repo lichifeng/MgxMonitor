@@ -7,6 +7,7 @@ import base64
 import tempfile
 import zipfile
 import threading
+import shutil
 from datetime import datetime
 from io import BytesIO
 import patoolib
@@ -76,7 +77,7 @@ class FileHandler:
             try:
                 self._s3_conn = S3Adapter(*s3_creds)
             except Exception as e:
-                pass
+                print(f'Failed to connect to S3: {e}')
         self._s3_replace = s3_replace
 
     def _clean_file(self, file_path: str | None = None) -> None:
@@ -92,6 +93,15 @@ class FileHandler:
             return
 
         os.remove(self._current_file)
+
+        # This part is kind of dirty, referring to a variable possibly defined
+        # in some inherited class??
+        # See ./file_obj_handler.py
+        print(f'Cleaning file: {file_path}')
+        tmpdir_from_child = getattr(self, '_tmpdir', None)
+        if tmpdir_from_child and os.path.isdir(tmpdir_from_child):
+            shutil.rmtree(tmpdir_from_child)
+            return
 
     def _set_current_file(self, file_path: str) -> None:
         '''Set the current file and its extension.'''
@@ -113,10 +123,8 @@ class FileHandler:
             self._set_current_file(file_path)
 
         if self._current_extension in self.ACCEPTED_RECORD_TYPES:
-            if self._current_file == self._file_path:
-                async_run = True
-            else:
-                async_run = False
+            async_run = self._current_file == self._file_path
+            print(f'Processing {self._current_file} async: {async_run}')
             return self._process_record(self._current_file, async_run=async_run, opts='-b')
 
         if self._current_extension in self.ACCEPTED_COMPRESSED_TYPES:
@@ -133,7 +141,7 @@ class FileHandler:
         finally:
             loop.close()
 
-    def _process_record(self, reccord_path: str, async_run: bool = False, opts: str = '') -> dict:
+    def _process_record(self, record_path: str, async_run: bool = False, opts: str = '') -> dict:
         '''Process the record file and return the result.
 
         Input file should be a record file, not a compressed package or other types.
@@ -145,11 +153,11 @@ class FileHandler:
             dict: The result of the processing.
         '''
 
-        parsed_result = parse(reccord_path, opts=opts)
+        parsed_result = parse(record_path, opts=opts)
 
         if parsed_result['status'] in ['error', 'invalid']:
             self._invalid_count += 1
-            self._clean_file(reccord_path)
+            self._clean_file(record_path)
             return parsed_result
 
         ############################################################
@@ -165,7 +173,7 @@ class FileHandler:
 
         if self._s3_conn:
             try:
-                tasks.append(self._save_to_s3(reccord_path, parsed_result))
+                tasks.append(self._save_to_s3(record_path, parsed_result))
             except Exception as e:
                 # TODO log the error and move the file to error directory
                 pass
@@ -258,6 +266,7 @@ class FileHandler:
 
         if self._s3_conn.have(self.OSS_RECORD_DIR + data['md5'] + '.zip') and not self._s3_replace:
             self._clean_file(record_path)
+            print('file exists')
             return 'OSS_FILE_EXISTS'
 
         with tempfile.TemporaryFile(suffix='.zip') as temp_file:
@@ -276,8 +285,7 @@ class FileHandler:
                         data['gameTime']).strftime('%Y-%m-%d %H:%M:%S')
                 else:
                     played_at = current_time
-                packed_name = f"{version_code}_{matchup}_{
-                    data['md5'][:5]}{data['fileext']}"
+                packed_name = f"{version_code}_{matchup}_{data['md5'][:5]}{data['fileext']}"
                 comment_template = f'''
 Age of Empires II record
 
@@ -298,7 +306,8 @@ Packed at {current_time}
             try:
                 result = self._s3_conn.upload(
                     temp_file, self.OSS_RECORD_DIR + data['md5'] + '.zip')
-                # print('uploaded: ' + result.object_name)
+                print('Uploaded: ' + result.object_name)
+                print('MD5: ' + result.etag)
                 self._clean_file(record_path)
                 return 'OSS_UPLOAD_SUCCESS'
             except Exception as e:

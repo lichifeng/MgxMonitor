@@ -65,4 +65,4 @@ if __name__ == "__main__":
     # Append the log message to the ratings_calc_log.txt file
     with open("/tmp/ratings_calc_log.txt", "a", encoding="ASCII") as file:
         file.write(log_message + "\n")
-    print(log_message)
+    # print(log_message)

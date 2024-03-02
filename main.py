@@ -2,9 +2,11 @@
 
 import os
 from datetime import datetime
-from fastapi import FastAPI, HTTPException
+from typing import Annotated
+from fastapi import FastAPI, HTTPException, Form, UploadFile, File
+from fastapi.staticfiles import StaticFiles
 from mgxhub.model.webapi import GameDetail
-from mgxhub.handler import DBHandler
+from mgxhub.handler import DBHandler, FileObjHandler, TmpCleaner
 from mgxhub.rating import RatingLock
 
 
@@ -71,6 +73,24 @@ async def unlock_rating(force: bool = False) -> dict:
     raise HTTPException(status_code=202, detail="Unlocked")
 
 
+@app.get("/system/tmpdir/list")
+async def list_tmpdirs() -> list:
+    '''List all temporary directories created by mgxhub'''
+
+    cleaner = TmpCleaner()
+    return cleaner.list_all_tmpdirs()
+
+
+@app.get("/system/tmpdir/purge")
+async def purge_tmpdirs() -> dict:
+    '''Purge all temporary directories created by mgxhub'''
+
+    cleaner = TmpCleaner()
+    cleaner.purge_all_tmpdirs()
+
+    raise HTTPException(status_code=202, detail="Purge command sent")
+
+
 @app.get("/game/{game_guid}")
 async def get_game(game_guid: str, lang: str = 'en') -> GameDetail | None:
     '''Get details for a game by its GUID.
@@ -86,3 +106,40 @@ async def get_game(game_guid: str, lang: str = 'en') -> GameDetail | None:
 
     raise HTTPException(
         status_code=404, detail=f"Game profile [{game_guid}] not found")
+
+
+@app.post("/upload")
+async def upload_a_record(
+    recfile: Annotated[UploadFile, File()],
+    lastmod: Annotated[str, Form()],
+):
+    '''Upload a record file to the server.
+
+    - **recfile**: The record file to be uploaded.
+    - **lastmod**: The last modified time of the record file.
+    '''
+
+    s3_test = [
+        "play.min.io",
+        "Q3AM3UQ867SPQQA43P2F",
+        "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
+        "us-east-1",
+        "aocrec-test-bucket"
+    ]
+    uploaded = FileObjHandler(
+        recfile.file, recfile.filename, lastmod,
+        {
+            "s3_creds": s3_test,
+            "s3_replace": True,
+            "delete_after": True,
+            "db_handler": db
+        }
+    )
+
+    # TODO 到底返回什么样的值？要不要返回地图？
+    return uploaded.process()
+
+
+MAP_DIR = os.getenv("MAP_DIR")
+if MAP_DIR:
+    app.mount("/maps", StaticFiles(directory=MAP_DIR), name="maps")
