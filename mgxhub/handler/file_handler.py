@@ -95,12 +95,20 @@ class FileHandler:
         if file_path:
             self._set_current_file(file_path)
 
-        print(f'Try cleaning file: {file_path}')
-        if not self._current_file or not os.path.isfile(self._current_file):
+        print(f'Try remove: {file_path}')
+        if not self._current_file:
             print(f'File not found when cleaning: {file_path}')
             return
 
-        os.remove(self._current_file)
+        if os.path.isfile(self._current_file):
+            os.remove(self._current_file)
+
+        if os.path.isdir(self._current_file):
+            try:
+                os.rmdir(self._current_file)
+            except OSError:
+                print('Trying to removing a non-empty directory')
+                return self.process(self._current_file)
 
         # This part is kind of dirty, referring to a variable possibly defined
         # in some inherited class??
@@ -131,6 +139,13 @@ class FileHandler:
 
         if file_path:
             self._set_current_file(file_path)
+        # NOTE Following codes should never use file_path directly, but use self._current_file
+
+        if os.path.isdir(self._current_file):
+            print(f'Processing directory: {self._current_file}')
+            self._process_directory(self._current_file)
+            self._clean_file(self._current_file)
+            return {'status': 'success', 'message': 'directory was processed'}
 
         if self._current_extension in self.ACCEPTED_RECORD_TYPES:
             async_run = self._current_file == self._file_path
@@ -222,6 +237,9 @@ class FileHandler:
             except Exception as e:
                 # TODO log the error and move the file to error directory
                 pass
+        else:
+            self._clean_file(record_path)
+            print('S3 not set')
 
         # Me:
         # 为什么我在对这个类单独测试时没有找到消息循环，但是通过fastapi调用的时候能找到？
@@ -267,13 +285,17 @@ class FileHandler:
         Args:
             dir_path (str): The path of the directory to be processed.
         '''
+
         for root, dirs, files in os.walk(dir_path):
             for file in files:
+                print(f"_pd Processing file: {file}")
                 file_path = os.path.join(root, file)
                 self.process(file_path)
             for inner_dir in dirs:
+                print(f"_pd Processing inner dir: {inner_dir}")
                 inner_path = os.path.join(root, inner_dir)
                 self._process_directory(inner_path)
+                self._clean_file(inner_path)
 
 
     def _process_compressed(self, zip_path: str) -> dict:

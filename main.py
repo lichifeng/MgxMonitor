@@ -8,10 +8,19 @@ from fastapi.staticfiles import StaticFiles
 from mgxhub.model.webapi import GameDetail
 from mgxhub.handler import DBHandler, FileObjHandler, TmpCleaner
 from mgxhub.rating import RatingLock
+from mgxhub.watcher import RecordWatcher
 
+s3_test = [
+        "play.min.io",
+        "Q3AM3UQ867SPQQA43P2F",
+        "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
+        "us-east-1",
+        "aocrec-test-bucket"
+    ]
 
 app = FastAPI()
 db = DBHandler()
+watcher = RecordWatcher(s3_creds=s3_test, db=db)
 
 
 @app.get("/")
@@ -119,13 +128,6 @@ async def upload_a_record(
     - **lastmod**: The last modified time of the record file.
     '''
 
-    s3_test = [
-        "play.min.io",
-        "Q3AM3UQ867SPQQA43P2F",
-        "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
-        "us-east-1",
-        "aocrec-test-bucket"
-    ]
     uploaded = FileObjHandler(
         recfile.file, recfile.filename, lastmod,
         {

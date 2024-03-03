@@ -214,3 +214,5 @@ pyrightconfig.json
 translations/po/
 MgxParser_D_EXE
 __tmp/
+__workdir/
+testconf.ini
