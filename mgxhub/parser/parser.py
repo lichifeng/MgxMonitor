@@ -6,13 +6,8 @@
 '''
 
 import json
-import os
 import subprocess
-
-current_file_path = os.path.abspath(__file__)
-current_dir = os.path.dirname(current_file_path)
-default_parser_path = os.path.join(current_dir, 'MgxParser_D_EXE')
-PARSER_PATH = os.environ.get('PARSER_PATH', default_parser_path)
+from mgxhub.config import cfg
 
 
 def parse(file_path: str, opts: str = '') -> dict:
@@ -36,8 +31,7 @@ def parse(file_path: str, opts: str = '') -> dict:
     '''
 
     # 使用 subprocess.run 来运行命令并获取输出
-    result = subprocess.run([PARSER_PATH, file_path, opts],
-                            capture_output=True, text=True, check=False)
+    result = subprocess.run([cfg.get('system', 'parser'), file_path, opts], capture_output=True, text=True, check=False)
 
     # 尝试将输出解析为 JSON
     try:

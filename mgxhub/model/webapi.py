@@ -97,8 +97,7 @@ class GameDetail(BaseModel):
 
         # if translations/en/LC_MESSAGES/<lang>.mo exists, use it
         # print(gettext.find(lang, 'translations', languages=["en"], all=True))
-        t = gettext.translation(lang, localedir='translations',
-                                languages=["en"], fallback=True)
+        t = gettext.translation(lang, localedir='translations', languages=["en"], fallback=True)
         _ = t.gettext
 
         super().__init__(

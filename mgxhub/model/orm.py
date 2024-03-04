@@ -20,6 +20,7 @@ class Game(Base):
 
     These information are identical across all players' records.
     '''
+
     __tablename__ = 'games'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -58,19 +59,18 @@ class Player(Base):
 
     Every player has his own related record file.
     '''
+
     __tablename__ = 'players'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     created = Column(DateTime, server_default=func.now())
     modified = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    game_guid = Column(String(64), ForeignKey(
-        'games.game_guid'), nullable=False, index=True)
+    game_guid = Column(String(64), ForeignKey('games.game_guid'), nullable=False, index=True)
     slot = Column(SmallInteger)
     index_player = Column(SmallInteger)
     name = Column(String(255), index=True, default='<NULL>')
-    name_hash = Column(String(32), index=True,
-                       default='3a7ac8a2092fc743e423336f473c7dac')  # md5 of <NULL>
+    name_hash = Column(String(32), index=True, default='3a7ac8a2092fc743e423336f473c7dac')  # md5 of <NULL>
     type = Column(String(20))
     team = Column(SmallInteger)
     color_index = Column(SmallInteger)
@@ -108,8 +108,7 @@ class File(Base):
     created = Column(DateTime, server_default=func.now())
     modified = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    game_guid = Column(String(64), ForeignKey(
-        'games.game_guid'), nullable=False, index=True)
+    game_guid = Column(String(64), ForeignKey('games.game_guid'), nullable=False, index=True)
     md5 = Column(String(32), nullable=False)
     parser = Column(String(50))
     parse_time = Column(Float)
@@ -135,8 +134,7 @@ class LegacyInfo(Base):
     modified = Column(DateTime)
     legacy_id = Column(Integer)
     filenames = Column(JSON)
-    game_guid = Column(String(64), ForeignKey(
-        'games.game_guid'), nullable=False)
+    game_guid = Column(String(64), ForeignKey('games.game_guid'), nullable=False)
 
     game = relationship('Game', back_populates='legacy_info')
 
@@ -149,15 +147,13 @@ class Chat(Base):
     '''
 
     __tablename__ = 'chats'
-    __table_args__ = (UniqueConstraint('game_guid', 'chat_time',
-                      'chat_content', name='_unique_chat_uc'),)
+    __table_args__ = (UniqueConstraint('game_guid', 'chat_time', 'chat_content', name='_unique_chat_uc'),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     created = Column(DateTime, server_default=func.now())
     modified = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    game_guid = Column(String(64), ForeignKey(
-        'games.game_guid'), nullable=False, index=True)
+    game_guid = Column(String(64), ForeignKey('games.game_guid'), nullable=False, index=True)
     # recorder_slot = Column(SmallInteger)
     chat_time = Column(Integer)
     chat_content = Column(Text)
@@ -166,8 +162,7 @@ class Chat(Base):
     # recorder = relationship('Player', back_populates='chat',
     #                         primaryjoin='foreign(Chat.recorder_slot) == Player.slot and Chat.game_guid == Player.game_guid')
 
-    idx_chat_time_content = Index(
-        'idx_chat_time_content', 'chat_time', 'chat_content')
+    idx_chat_time_content = Index('idx_chat_time_content', 'chat_time', 'chat_content')
 
 
 class Rating(Base):

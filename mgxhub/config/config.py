@@ -17,6 +17,11 @@ class Config(DefaultConfig, metaclass=Singleton):
 
     config = Config().config
     print(config.get('system', 'mapdir')) # /path/to/__workdir/map
+
+    # Or using a shortcut
+    from mgxhub.config import cfg
+
+    print(cfg.get('system', 'mapdir')) # /path/to/__workdir/map
     ```    
     '''
     
@@ -24,12 +29,30 @@ class Config(DefaultConfig, metaclass=Singleton):
         # Load default configuration
         super().__init__()
 
-        # Try load user configuration to override default
-        if cfg_path and os.path.exists(cfg_path):
-            self.config.read(cfg_path)
+        # Load user configuration
+        self.load(cfg_path)
+
+
+    def load(self, cfg_path: str | None = None):
+        '''Load user configuration to override default.
+        Absolute path or relative path to the project root.
+
+        Args:
+        - **cfg_path**: Path to the user configuration file.
+
+        Example:
+        ```python
+        Config().load('testconf.ini')
+        ```
+        '''
+
+        if not cfg_path:
+            cfg_path = os.getenv('MGXHUB_CONFIG')
+            if cfg_path and os.path.exists(cfg_path):
+                self.config.read(cfg_path)
         else:
-            config_path = os.getenv('MGXHUB_CONFIG')
-            if config_path and os.path.exists(config_path):
-                self.config.read(config_path)
+            cfg_path = os.path.join(self.project_root(), cfg_path)
+            if os.path.exists(cfg_path):
+                self.config.read(cfg_path)
 
         

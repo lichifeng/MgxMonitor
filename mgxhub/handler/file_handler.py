@@ -8,6 +8,8 @@ import tempfile
 import zipfile
 import threading
 import shutil
+import random
+import string
 from datetime import datetime
 from io import BytesIO
 import patoolib
@@ -15,6 +17,7 @@ from PIL import Image
 from mgxhub.parser import parse
 from mgxhub.storage import S3Adapter
 from mgxhub.config import cfg
+from mgxhub.logger import logger
 from .db_handler import DBHandler
 
 
@@ -30,8 +33,7 @@ class FileHandler:
         map_dir (str, optional): The directory to save the map images. Defaults to "".
         delete_after (bool, optional): Whether to delete the file after processing. Defaults to False.
     '''
-    ACCEPTED_RECORD_TYPES = ['mgx', 'mgx2',
-                             'mgz', 'mgl', 'msx', 'msx2', 'aoe2record']
+    ACCEPTED_RECORD_TYPES = ['mgx', 'mgx2', 'mgz', 'mgl', 'msx', 'msx2', 'aoe2record']
     ACCEPTED_COMPRESSED_TYPES = ['zip', 'rar', '7z']
     OSS_RECORD_DIR = '/records/'
 
@@ -73,9 +75,8 @@ class FileHandler:
         try:
             self._s3_conn = S3Adapter(**cfg.s3)
         except Exception as e:
-            print(f'Failed to connect to S3: {e}')
+            logger.debug(f's3 error: {e}')
         self._s3_replace = s3_replace
-        print(f"Passed to FileHandler: {file_path}")
 
 
     def _clean_file(self, file_path: str | None = None) -> None:
@@ -90,9 +91,7 @@ class FileHandler:
         if file_path:
             self._set_current_file(file_path)
 
-        print(f'Try remove: {file_path}')
         if not self._current_file:
-            print(f'File not found when cleaning: {file_path}')
             return
 
         if os.path.isfile(self._current_file):
@@ -102,7 +101,7 @@ class FileHandler:
             try:
                 os.rmdir(self._current_file)
             except OSError:
-                print('Trying to removing a non-empty directory')
+                logger.warning(f'Try removing non-empty dir: {self._current_file}')
                 return self.process(self._current_file)
 
         # This part is kind of dirty, referring to a variable possibly defined
@@ -110,7 +109,6 @@ class FileHandler:
         # See ./file_obj_handler.py
         tmpdir_from_child = getattr(self, '_tmpdir', None)
         if tmpdir_from_child and os.path.isdir(tmpdir_from_child):
-            print(f'Cleaning upload dir: {tmpdir_from_child}')
             shutil.rmtree(tmpdir_from_child)
             return
 
@@ -137,18 +135,17 @@ class FileHandler:
         # NOTE Following codes should never use file_path directly, but use self._current_file
 
         if os.path.isdir(self._current_file):
-            print(f'Processing directory: {self._current_file}')
             self._process_directory(self._current_file)
             self._clean_file(self._current_file)
             return {'status': 'success', 'message': 'directory was processed'}
 
         if self._current_extension in self.ACCEPTED_RECORD_TYPES:
             async_run = self._current_file == self._file_path
-            print(f'Async: {async_run}, Processing: {self._current_file}')
+            logger.info(f'Process: {self._current_file}')
             return self._process_record(self._current_file, async_run=async_run, opts='-b')
 
         if self._current_extension in self.ACCEPTED_COMPRESSED_TYPES:
-            print(f'Processing compressed: {self._current_file}')
+            logger.info(f'Process(compressed): {self._current_file}')
             return self._process_compressed(self._current_file)
 
         self._clean_file()
@@ -211,6 +208,7 @@ class FileHandler:
         parsed_result = parse(record_path, opts=opts)
 
         if parsed_result['status'] in ['error', 'invalid']:
+            logger.warning(f'Invalid record: {record_path}')
             self._invalid_count += 1
             self._clean_file(record_path)
             return parsed_result
@@ -221,20 +219,19 @@ class FileHandler:
         tasks = []
 
         if 'map' in parsed_result and 'base64' in parsed_result['map'] and self._map_dir:
-            tasks.append(self._save_map(
-                parsed_result['guid'], parsed_result['map']['base64']))
+            tasks.append(self._save_map(parsed_result['guid'], parsed_result['map']['base64']))
 
         tasks.append(self._save_to_db(parsed_result, self._db_handler))
 
         if self._s3_conn:
             try:
+                # raise Exception('Test error')
                 tasks.append(self._save_to_s3(record_path, parsed_result))
             except Exception as e:
-                # TODO log the error and move the file to error directory
-                pass
+                logger.error(f'_save_to_s3 error: {e}')
+                self._move_to_error(record_path)
         else:
             self._clean_file(record_path)
-            print('S3 not set')
 
         # Me:
         # 为什么我在对这个类单独测试时没有找到消息循环，但是通过fastapi调用的时候能找到？
@@ -263,13 +260,11 @@ class FileHandler:
         slow_tasks_thd = threading.Thread(target=self._slow_tasks, args=(tasks,))
         slow_tasks_thd.start()
         if not async_run:
-            print('Waiting 100s for slow tasks')
             slow_tasks_thd.join(100)
 
         ############### Asyncable Procedures End ###################
         ############################################################
         
-        print("Leaving asyncable procedures")
         self._valid_count += 1
         return parsed_result
 
@@ -283,11 +278,9 @@ class FileHandler:
 
         for root, dirs, files in os.walk(dir_path):
             for file in files:
-                print(f"_pd Processing file: {file}")
                 file_path = os.path.join(root, file)
                 self.process(file_path)
             for inner_dir in dirs:
-                print(f"_pd Processing inner dir: {inner_dir}")
                 inner_path = os.path.join(root, inner_dir)
                 self._process_directory(inner_path)
                 self._clean_file(inner_path)
@@ -305,15 +298,15 @@ class FileHandler:
 
         with tempfile.TemporaryDirectory() as temp_dir:
             try:
-                patoolib.extract_archive(
-                    zip_path, outdir=temp_dir, interactive=False, verbosity=-1)
+                # raise Exception('Test error')
+                patoolib.extract_archive(zip_path, outdir=temp_dir, interactive=False, verbosity=-1)
             except Exception as e:
-                # TODO log the error and move the file to error directory
+                logger.error(f'patoolib error: {e}')
+                self._move_to_error(zip_path)
                 return {'status': 'invalid', 'message': 'failed to extract a compressed file'}
 
             self._process_directory(temp_dir)
             self._clean_file(zip_path)
-        print(f"Left unzipped temp_dir scope.")
 
         return {'status': 'success', 'message': 'compressed file was scaduled for processing'}
 
@@ -332,10 +325,11 @@ class FileHandler:
         else:
             try:
                 result = db.add_game(data)
+                logger.info(f'[DB] Add: {result}')
             except Exception as e:
+                logger.error(f'_save_to_db error: {e}')
                 result = 'error', str(e)
 
-        print(f"DB result: {result}")
         return result
 
 
@@ -356,11 +350,12 @@ class FileHandler:
 
         required_keys = ['md5', 'fileext', 'guid']
         if not all(key in data for key in required_keys):
+            logger.warning(f'Bad game meta: {record_path}')
+            self._move_to_error(record_path)
             return 'OSS_BAD_META'
 
         if self._s3_conn.have(self.OSS_RECORD_DIR + data['md5'] + '.zip') and not self._s3_replace:
             self._clean_file(record_path)
-            print('OSS: File exists')
             return 'OSS_FILE_EXISTS'
 
         with tempfile.TemporaryFile(suffix='.zip') as temp_file:
@@ -398,14 +393,13 @@ Packed at {current_time}
                 z.comment = comment_template.encode('ASCII')
 
             try:
-                result = self._s3_conn.upload(
-                    temp_file, self.OSS_RECORD_DIR + data['md5'] + '.zip')
-                print('OSS uploaded: ' + result.object_name + ' ' + result.etag)
+                result = self._s3_conn.upload(temp_file, self.OSS_RECORD_DIR + data['md5'] + '.zip')
+                logger.info(f'Uploaded: {result.object_name}')
                 self._clean_file(record_path)
                 return 'OSS_UPLOAD_SUCCESS'
             except Exception as e:
-                # TODO log the error and move the file to error directory
-                print(f'OSS upload error: {e}')
+                logger.error(f'_save_to_s3 error: {e}')
+                self._move_to_error(record_path)
                 return 'OSS_UPLOAD_ERROR'
 
 
@@ -429,4 +423,28 @@ Packed at {current_time}
             img.save(os.path.join(self._map_dir, basename + '.png'))
             return 'MAP_SAVE_SUCCESS'
         except Exception as e:
+            logger.error(f'_save_map error: {e}, basename(guid): {basename}, current file: {self._current_file}')
             return 'MAP_SAVE_ERROR'
+
+
+    def _move_to_error(self, file_path: str) -> str:
+        '''Move the file to the error directory.
+
+        Args:
+            file_path (str): The path of the file to be moved.
+        '''
+
+        error_dir = cfg.get('system', 'errordir')
+        os.makedirs(error_dir, exist_ok=True)
+
+        file_name = os.path.basename(file_path)
+        new_file_name = file_name
+        file_exists = os.path.isfile(os.path.join(error_dir, new_file_name))
+        while file_exists:
+            prefix = ''.join(random.choices(string.ascii_lowercase, k=3))
+            new_file_name = f"{prefix}_{file_name}"
+            file_exists = os.path.isfile(os.path.join(error_dir, new_file_name))
+
+        new_file_path = os.path.join(error_dir, new_file_name)
+        shutil.move(file_path, new_file_path)
+        return new_file_path

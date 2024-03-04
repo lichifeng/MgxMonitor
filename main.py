@@ -9,13 +9,12 @@ from mgxhub.model.webapi import GameDetail
 from mgxhub.handler import DBHandler, FileObjHandler, TmpCleaner
 from mgxhub.rating import RatingLock
 from mgxhub.watcher import RecordWatcher
-from mgxhub.config import cfg
+from mgxhub.config import cfg, Config
 
-
+Config().load('testconf.ini')
 app = FastAPI()
 db = DBHandler()
-watcher = RecordWatcher(db)
-
+watcher = RecordWatcher()
 
 @app.get("/")
 async def ping():
@@ -56,12 +55,10 @@ async def start_rating_calc() -> dict:
 
     lock = RatingLock()
     if lock.rating_running():
-        raise HTTPException(
-            status_code=409, detail="Rating calculation process is already running")
+        raise HTTPException(status_code=409, detail="Rating calculation process is already running")
 
     lock.start_calc()
-    raise HTTPException(
-        status_code=202, detail="Rating calculation process started")
+    raise HTTPException(status_code=202, detail="Rating calculation process started")
 
 
 @app.get("/system/rating/unlock")

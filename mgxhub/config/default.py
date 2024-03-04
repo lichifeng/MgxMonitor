@@ -15,10 +15,10 @@ class DefaultConfig:
 
         # System configuration
         # - Directories need to be created when used
-        parser_default = os.path.join(self.project_root(), 'parser', 'MgxParser_D_EXE')
+        parser_default = os.path.join(self.project_root(), 'mgxhub', 'parser', 'MgxParser_D_EXE')
         self.config['system'] = {
             'parser': parser_default,
-            'workdir': os.path.join(self.project_root(), '__workdir')
+            'workdir': os.path.join(self.project_root(), '__workdir') # suppose read-only
         }
         self.config['system']['mapdir'] = os.path.join(self.config['system']['workdir'], 'map')
         self.config['system']['logdir'] = os.path.join(self.config['system']['workdir'], 'log')
@@ -26,8 +26,8 @@ class DefaultConfig:
         self.config['system']['tmpdir'] = os.path.join(self.config['system']['workdir'], 'tmp')
         self.config['system']['tmpprefix'] = 'tmp_'
         self.config['system']['errordir'] = os.path.join(self.config['system']['workdir'], 'error')
-        self.config['system']['langdir'] = os.path.join(self.project_root(), 'translations/en/LC_MESSAGES') # read-only
-        self.config['system']['loglevel'] = 'INFO'
+        self.config['system']['langdir'] = os.path.join(self.project_root(), 'translations/en/LC_MESSAGES')
+        self.config['system']['loglevel'] = 'DEBUG'
         self.config['system']['logdest'] = 'console' # if not 'console', will try to use log file
 
         # Database configuration

@@ -7,23 +7,23 @@ import argparse
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from mgxhub.config import cfg
+from mgxhub.logger import logger
 from . import EloCalculator
 
 if __name__ == "__main__":
     # Check if the lock file exists, other processes can read the RATING_CALC_LOCK_FILE environment variable to get the lock file path
-    LOCK_FILE = os.getenv('RATING_CALC_LOCK_FILE',
-                          # NOTE This default value is hardcoded in the RatingLock class
-                          "/tmp/mgxhub_elo_calc_process.lock")
+    LOCK_FILE = cfg.get('rating', 'lockfile')
 
     if os.path.exists(LOCK_FILE):
-        print("Only one instance of the ELO rating calculator can run at a time. Exiting.")
+        logger.debug("Only one instance of the ELO rating calculator can run at a time. Exiting.")
         sys.exit(1)
 
     start_time = time.time()
 
     # Create the lock file
     with open(LOCK_FILE, 'w', encoding="ASCII") as file:
-        # TODO other processes can read the lock file to check if the process is still running
+        # Other processes can read the lock file to check if the process is still running
         # Write current PID to the first line
         pid = os.getpid()
         file.write(str(pid) + "\n")
@@ -34,23 +34,21 @@ if __name__ == "__main__":
 
     try:
         parser = argparse.ArgumentParser(description='Update ELO ratings.')
-        parser.add_argument('--db_path', default=os.getenv('SQLITE_PATH',
-                            'test_db.sqlite3'), help='Path to SQLite database')
-        parser.add_argument('--duration_threshold', default=os.getenv(
-            'RATING_DURATION_THRESHOLD', 15 * 60 * 1000), help='Duration threshold for ELO rating update')
-        parser.add_argument('--batch_size', default=os.getenv(
-            'RATING_CALC_BATCH_SIZE', 150000), help='Batch size for ELO rating update')
+        parser.add_argument('--db_path', default=cfg.get('database', 'sqlite'), help='Path to SQLite database')
+        parser.add_argument('--duration_threshold', default=cfg.get('rating', 'durationthreshold'), help='Duration threshold for ELO rating update')
+        parser.add_argument('--batch_size', default=cfg.get('rating', 'batchsize'), help='Batch size for ELO rating update')
         args = parser.parse_args()
 
         engine = create_engine(f"sqlite:///{args.db_path}", echo=False)
         session = Session(engine)
         elo = EloCalculator(session)
         elo.update_ratings(
-            duration_threshold=int(args.duration_threshold), batch_size=int(args.batch_size))
+            duration_threshold=int(args.duration_threshold),
+            batch_size=int(args.batch_size)
+            )
         session.close()
         engine.dispose()
     finally:
-        # Remove the lock file
         os.remove(LOCK_FILE)
 
     end_time = time.time()
@@ -60,9 +58,6 @@ if __name__ == "__main__":
     current_time = datetime.now()
 
     # Create the log message
-    log_message = f"[{current_time}] Duration(seconds): {elapsed_time}"
+    log_message = f"Rating calculated, duration: {elapsed_time}"
 
-    # Append the log message to the ratings_calc_log.txt file
-    with open("/tmp/ratings_calc_log.txt", "a", encoding="ASCII") as file:
-        file.write(log_message + "\n")
-    # print(log_message)
+    logger.info(log_message)

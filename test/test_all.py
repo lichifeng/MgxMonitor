@@ -31,13 +31,7 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
 
         test_obj1 = '/records/7ce24dd2608dec17d85d48c781853997.zip'
         test_obj2 = '/records/717cd3fc274a200ba81a2cc2cc65c288.zip'
-        ossconn = S3Adapter(
-            cfg.get('s3', 'endpoint'),
-            cfg.get('s3', 'accesskey'),
-            cfg.get('s3', 'secretkey'),
-            cfg.get('s3', 'region'),
-            cfg.get('s3', 'bucket')
-        )
+        ossconn = S3Adapter(**cfg.s3)
         ossconn.remove_object(test_obj1)
         ossconn.remove_object(test_obj2)
 
@@ -47,17 +41,15 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         f2 = os.path.join(script_dir, 'samples/recs_in_zip_tmp.zip')
         copyfile(f1, f2)
 
-        hd = FileHandler(f2, False, True)
+        hd = FileHandler(f2, False, True, DBHandler())
         result = hd.process()
         self.assertEqual(result['status'], 'success')
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"\r\nElapsed time: {elapsed_time} seconds")
 
-        self.assertTrue(ossconn.have(
-            '/records/7ce24dd2608dec17d85d48c781853997.zip'))
-        self.assertTrue(ossconn.have(
-            '/records/717cd3fc274a200ba81a2cc2cc65c288.zip'))
+        self.assertTrue(ossconn.have('/records/7ce24dd2608dec17d85d48c781853997.zip'))
+        self.assertTrue(ossconn.have('/records/717cd3fc274a200ba81a2cc2cc65c288.zip'))
 
     def test_handle_record_async(self):
         '''Test file uploading process with async.'''
@@ -65,16 +57,9 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         start_time = time.time()
 
         test_obj1 = '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'
-        ossconn = S3Adapter(
-            cfg.get('s3', 'endpoint'),
-            cfg.get('s3', 'accesskey'),
-            cfg.get('s3', 'secretkey'),
-            cfg.get('s3', 'region'),
-            cfg.get('s3', 'bucket')
-        )
+        ossconn = S3Adapter(**cfg.s3)
         ossconn.remove_object(test_obj1)
-        self.assertFalse(ossconn.have(
-            '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
+        self.assertFalse(ossconn.have('/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
 
         script_path = os.path.abspath(__file__)
         script_dir = os.path.dirname(script_path)
@@ -92,14 +77,12 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         elapsed_time = end_time - start_time
         print(f"\r\nElapsed time: {elapsed_time} seconds")
 
-        self.assertFalse(ossconn.have(
-            '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
+        self.assertFalse(ossconn.have('/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
         for _ in range(10):
             if ossconn.have('/records/5e3b2a7e604f71c8a3793d41f522639c.zip') and os.path.isfile('./d46a6ae13bea04e1744043f5017f9786.png'):
                 break
             sleep(1)
-        self.assertTrue(ossconn.have(
-            '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
+        self.assertTrue(ossconn.have('/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
         hd._clean_file('./d46a6ae13bea04e1744043f5017f9786.png')
 
     def test_save_map(self):
@@ -188,11 +171,12 @@ class TestRecordCRUD(unittest.TestCase):
     def test_crud(self):
         '''Test record CRUD operations.'''
 
+        testdb = os.path.join(cfg.get('system', 'workdir'), 'test_db_crud.sqlite3')
         try:
-            os.remove("test_db_new_insert.sqlite3")
+            os.remove(testdb)
         except FileNotFoundError:
             pass
-        dbh = DBHandler("test_db_new_insert.sqlite3")
+        dbh = DBHandler(testdb)
 
         # INSERTATION
         # load test/samples/parsed_data_zip.json and parsed the json string into

@@ -6,6 +6,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from mgxhub.config import cfg
+from mgxhub.logger import logger
 from .file_handler import FileHandler
 
 
@@ -14,6 +15,7 @@ class FileObjHandler(FileHandler):
 
     _tmpdir: str | None = None
     _auto_delete: bool = False
+
 
     def __init__(self,
                  file: io.StringIO | io.BytesIO | io.TextIOWrapper,
@@ -46,7 +48,7 @@ class FileObjHandler(FileHandler):
         # Save the file to a temporary location
         os.makedirs(cfg.get('system', 'tmpdir'), exist_ok=True)
         self._tmpdir = tempfile.mkdtemp(
-            prefix=cfg.get('system', 'tmpprefix'), 
+            prefix=cfg.get('system', 'tmpprefix'),
             dir=cfg.get('system', 'tmpdir')
             )
         recfile = os.path.join(self._tmpdir, filename)
@@ -55,9 +57,10 @@ class FileObjHandler(FileHandler):
 
         # Change creation time and last modified time of the file
         os.utime(recfile, (lastmod_obj.timestamp(), lastmod_obj.timestamp()))
-        print(f"File uploaded, save to: {recfile}")
+        logger.debug(f"File buffer saved: {recfile}")
 
         super().__init__(recfile, **handler_opts)
+
 
     def __del__(self):
         if self._auto_delete and  self._tmpdir and os.path.isdir(self._tmpdir):

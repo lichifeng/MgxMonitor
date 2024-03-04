@@ -5,7 +5,7 @@ import time
 import sys
 import subprocess
 import signal
-
+from mgxhub.config import cfg
 
 class RatingLock:
     """Used to operate lock file for rating calculation process."""
@@ -15,29 +15,35 @@ class RatingLock:
     _lock_file: str | None = None
 
     def __init__(self):
-        self._lock_file = os.getenv(
-            'RATING_CALC_LOCK_FILE', "/tmp/mgxhub_elo_calc_process.lock")
+        self._lock_file = cfg.get('rating', 'lockfile')
         if os.path.exists(self._lock_file):
             with open(self._lock_file, 'r', encoding="ASCII") as file:
                 lines = file.readlines()
                 self._pid = int(lines[0].strip())
                 self._started_time = int(lines[1].strip())
 
+
     @property
     def pid(self):
         """Return the PID in the lock file."""
+
         return self._pid
+
 
     @property
     def started_time(self):
         """Return the timestamp in the lock file."""
+
         return self._started_time
+
 
     def rating_running(self) -> bool:
         """Check if the rating calculation process is running.
         An alias for self.pid_exists().
         """
+
         return self.pid_exists()
+
 
     @property
     def lock_file_path(self) -> str | None:
@@ -47,9 +53,12 @@ class RatingLock:
 
         return self._lock_file
 
+
     def lock_file_exists(self) -> bool:
         """Check if the lock file exists."""
+
         return os.path.exists(self._lock_file)
+
 
     def pid_exists(self) -> bool:
         """Check if the PID exists in the system.
@@ -67,6 +76,7 @@ class RatingLock:
 
         return True
 
+
     @property
     def time_elapsed(self) -> float | None:
         """Return the time elapsed since the timestamp in the lock file."""
@@ -74,6 +84,7 @@ class RatingLock:
         if self.started_time is None:
             return None
         return time.time() - self.started_time
+
 
     def start_calc(self):
         """Start the rating calculation process."""
@@ -86,7 +97,8 @@ class RatingLock:
 
             # Start a new thread to run the mgxhub.rating module, it does not
             # wait for the new thread to finish
-            subprocess.Popen([current_interpreter, '-m', 'mgxhub.rating'])
+            subprocess.Popen([current_interpreter, '-m', 'mgxhub.rating', '--db_path', cfg.get('database', 'sqlite')])
+
 
     def unlock(self, force=False):
         """Remove the lock file. 
@@ -101,6 +113,7 @@ class RatingLock:
                 os.remove(self.lock_file_path)
             except FileNotFoundError:
                 pass
+
 
     def terminate_process(self):
         """Terminate the process with the PID in the lock file.

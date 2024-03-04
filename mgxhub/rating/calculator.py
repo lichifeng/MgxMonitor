@@ -1,7 +1,7 @@
 '''Used to calculate ELO ratings.
 If used as a script, run it as a module with the following command:
 ```bash
-python -m mgxhub.rating.calculator
+python -m mgxhub.rating
 ```
 '''
 
@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, Query
 from sqlalchemy.exc import OperationalError
 from sqlalchemy import text, and_
 from mgxhub.model.orm import Rating, Player, Game
+from mgxhub.logger import logger
 
 
 class EloCalculator:
@@ -28,6 +29,7 @@ class EloCalculator:
         self._K = K
         self._session = session
 
+
     def _calc_rating_delta(self, rating_winner: Number, rating_loser: Number):
         '''Calculate the new Elo rating delta for the winner and loser.
 
@@ -37,13 +39,16 @@ class EloCalculator:
         '''
 
         prob_winner = self._calc_probability(rating_winner, rating_loser)
-        prob_loser = self._calc_probability(rating_loser, rating_winner)
+        prob_loser = self._calc_probability(rating_loser, rating_winner) # pylint: disable=W1114
 
         return round(self._K * (1 - prob_loser)), round(self._K * (0 - prob_winner))
 
+
     def _calc_probability(self, rating_winner: Number, rating_loser: Number):
         '''Calculate the Probability of Winning.'''
+
         return 1.0 * 1.0 / (1 + 1.0 * math.pow(10, 1.0 * (rating_winner - rating_loser) / 400))
+
 
     def _fetch_in_batches(self, query: Query, batch_size: int | None = None):
         '''Fetch the query results in batches.'''
@@ -62,26 +67,24 @@ class EloCalculator:
                     yield row
                 offset += batch_size
 
+
     def _update_game_ratings(self, col: dict):
         # Start calculating the ratings for the previous game
         # First check if there are duplicate names in the winners or losers, skip them
         # nh is short for name_hash
-        if \
-            len([nh for nh, _ in self._winners_cache]) != len(set(nh for nh, _ in self._winners_cache)) \
-                or len([nh for nh, _ in self._losers_cache]) != len(set(nh for nh, _ in self._losers_cache)):
-            pass
+        winner_hash_list = [nh for nh, _ in self._winners_cache]
+        loser_hash_list = [nh for nh, _ in self._losers_cache]
+        if len(winner_hash_list) != len(set(winner_hash_list)) or len(loser_hash_list) != len(set(loser_hash_list)):
+            logger.warning(f"Duplicate name_hash detected in {self._current_game_guid}")
         elif len(self._winners_cache) == 0 or len(self._losers_cache) == 0:
-            pass
+            logger.warning(f"Empty winners or losers in {self._current_game_guid}")
         else:
             # Calculate average rating of previous game's winners and losers
-            rating_winner = fmean([col[nh]["rating"]
-                                   for nh, _ in self._winners_cache])
-            rating_loser = fmean([col[nh]["rating"]
-                                  for nh, _ in self._losers_cache])
+            rating_winner = fmean([col[nh]["rating"] for nh, _ in self._winners_cache])
+            rating_loser = fmean([col[nh]["rating"] for nh, _ in self._losers_cache])
 
             # Calculate the new Elo rating delta for the winner and loser
-            delta_winner, delta_loser = self._calc_rating_delta(
-                rating_winner, rating_loser)
+            delta_winner, delta_loser = self._calc_rating_delta(rating_winner, rating_loser)
 
             # Update the ratings cache
             for _, p in self._winners_cache:
@@ -98,6 +101,7 @@ class EloCalculator:
                 p["lowest"] = min(p["rating"], p["lowest"])
                 p["streak"] = 0
 
+
     def _generate_rating_cache(self, duration_threshold: int = 15 * 60 * 1000, batch_size: int | None = None) -> None:
         '''Generate the ratings cache.'''
 
@@ -111,7 +115,7 @@ class EloCalculator:
         ).join(
             Game, Player.game_guid == Game.game_guid
         ).filter(
-            and_(Game.duration > duration_threshold, 
+            and_(Game.duration > duration_threshold,
                  Game.is_multiplayer == 1, Game.include_ai == 0, Player.is_main_operator == 1)
         ).order_by(
             Game.game_time, Player.game_guid, Player.is_winner
@@ -171,6 +175,7 @@ class EloCalculator:
         self._winners_cache.clear()
         self._losers_cache.clear()
 
+
     def update_ratings(self, duration_threshold: int = 15 * 60 * 1000, batch_size: int | None = None):
         '''Update the ratings table.'''
 
@@ -184,8 +189,7 @@ class EloCalculator:
 
         # For SQLite, you can use:
         try:
-            self._session.execute(
-                text("UPDATE sqlite_sequence SET seq = 0 WHERE name='ratings'"))
+            self._session.execute(text("UPDATE sqlite_sequence SET seq = 0 WHERE name='ratings'"))
         except OperationalError:
             pass  # Ignore the error if sqlite_sequence table does not exist
 
@@ -215,12 +219,17 @@ class EloCalculator:
 
         # Commit the changes
         self._session.commit()
+        logger.info("Ratings table updated")
+
 
     def set_K(self, K: int):
         '''Set the maximum possible adjustment.'''
+
         self._K = K
+
 
     @property
     def ratings(self):
         '''Return the ratings cache.'''
+
         return self._rating_cache

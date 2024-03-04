@@ -12,10 +12,11 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record):
         log_message = {
+            'level': record.levelname,
             'time': self.formatTime(record, self.datefmt),
-            'file': record.filename,
-            'line': record.lineno,
-            'message': record.getMessage()
+            'message': record.getMessage(),
+            'source': record.pathname,
+            'line': record.lineno
         }
         return json.dumps(log_message)
 

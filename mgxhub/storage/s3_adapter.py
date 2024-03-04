@@ -5,6 +5,7 @@ import os
 import json
 from minio import Minio
 from minio.helpers import ObjectWriteResult
+from mgxhub.logger import logger
 
 
 class S3Adapter:
@@ -38,20 +39,14 @@ class S3Adapter:
             region: str | None = None,
             bucket: str | None = None
     ):
-        self._endpoint = endpoint if endpoint else os.environ.get(
-            'S3_ENDPOINT')
-        self._accesskey = accesskey if accesskey else os.environ.get(
-            'S3_ACCESS_KEY')
-        self._secretkey = secretkey if secretkey else os.environ.get(
-            'S3_SECRET_KEY')
-        self._region = region if region else os.environ.get(
-            'S3_REGION')
-        self._bucket = bucket if bucket else os.environ.get(
-            'S3_BUCKET')
+        self._endpoint = endpoint
+        self._accesskey = accesskey
+        self._secretkey = secretkey
+        self._region = region
+        self._bucket = bucket
 
         if not self._endpoint or not self._accesskey or not self._secretkey:
-            raise ValueError(
-                'Missing S3 endpoint, access key, secret key')
+            raise ValueError('Missing S3 endpoint || access key || secret key')
 
         self._client = Minio(self._endpoint,
                              access_key=self._accesskey,
@@ -145,3 +140,4 @@ class S3Adapter:
         '''
 
         self._client.remove_object(self.bucket, file_path)
+        logger.warning(f'[S3] Removed {file_path} from {self.bucket}')
