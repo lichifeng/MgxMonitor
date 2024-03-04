@@ -22,10 +22,10 @@ class S3Adapter:
     '''
 
     _endpoint = None
-    _access_key = None
-    _secret_key = None
+    _accesskey = None
+    _secretkey = None
     _region = None
-    _bucket_name = None
+    _bucket = None
     _virtual_host_style = False
     _client = None
 
@@ -33,29 +33,29 @@ class S3Adapter:
     def __init__(
             self,
             endpoint: str = None,
-            access_key: str = None,
-            secret_key: str = None,
+            accesskey: str = None,
+            secretkey: str = None,
             region: str | None = None,
-            bucket_name: str | None = None
+            bucket: str | None = None
     ):
         self._endpoint = endpoint if endpoint else os.environ.get(
             'S3_ENDPOINT')
-        self._access_key = access_key if access_key else os.environ.get(
+        self._accesskey = accesskey if accesskey else os.environ.get(
             'S3_ACCESS_KEY')
-        self._secret_key = secret_key if secret_key else os.environ.get(
+        self._secretkey = secretkey if secretkey else os.environ.get(
             'S3_SECRET_KEY')
         self._region = region if region else os.environ.get(
             'S3_REGION')
-        self._bucket_name = bucket_name if bucket_name else os.environ.get(
+        self._bucket = bucket if bucket else os.environ.get(
             'S3_BUCKET')
 
-        if not self._endpoint or not self._access_key or not self._secret_key:
+        if not self._endpoint or not self._accesskey or not self._secretkey:
             raise ValueError(
                 'Missing S3 endpoint, access key, secret key')
 
         self._client = Minio(self._endpoint,
-                             access_key=self._access_key,
-                             secret_key=self._secret_key,
+                             access_key=self._accesskey,
+                             secret_key=self._secretkey,
                              region=self._region
                              )
         self.set_bucket()
@@ -65,15 +65,15 @@ class S3Adapter:
     def bucket(self) -> str:
         '''The bucket name to be used'''
 
-        return self._bucket_name
+        return self._bucket
     
 
     def set_bucket(self) -> None:
         '''Set the bucket policy to public read'''
 
         # if self.bucket is blank string, use part before the first dot of endpoint as bucket name
-        if not self._bucket_name:
-            self._bucket_name = self._endpoint.split('.')[0]
+        if not self._bucket:
+            self._bucket = self._endpoint.split('.')[0]
             self._virtual_host_style = True
 
         _public_read_policy = {
@@ -84,16 +84,16 @@ class S3Adapter:
                     "Principal": '*',
                     "Effect": 'Allow',
                     "Action": ['s3:GetObject'],
-                    "Resource": [f"arn:aws:s3:::{self._bucket_name}/*"]
+                    "Resource": [f"arn:aws:s3:::{self._bucket}/*"]
                 }
             ]
         }
 
-        found = self._client.bucket_exists(self._bucket_name)
+        found = self._client.bucket_exists(self._bucket)
         if not found:
-            self._client.make_bucket(self._bucket_name)
+            self._client.make_bucket(self._bucket)
         self._client.set_bucket_policy(
-            self._bucket_name, json.dumps(_public_read_policy))
+            self._bucket, json.dumps(_public_read_policy))
 
 
     def have(self, file_path: str) -> bool:
@@ -107,7 +107,7 @@ class S3Adapter:
         '''
 
         try:
-            result = self._client.stat_object(self._bucket_name, file_path)
+            result = self._client.stat_object(self._bucket, file_path)
             return bool(result.etag)
         except Exception as e:
             return False
@@ -126,14 +126,14 @@ class S3Adapter:
 
         if isinstance(source_file, str):
             return self._client.fput_object(
-                self._bucket_name, dest_file, source_file,
+                self._bucket, dest_file, source_file,
             )
         else:
             source_file.seek(0, os.SEEK_END)
             size = source_file.tell()
             source_file.seek(0)
             return self._client.put_object(
-                self._bucket_name, dest_file, source_file, length=size
+                self._bucket, dest_file, source_file, length=size
             )
 
 

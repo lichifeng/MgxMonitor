@@ -16,14 +16,7 @@ from mgxhub.parser import parse
 from mgxhub.handler import FileHandler
 from mgxhub.storage import S3Adapter
 from mgxhub.handler import DBHandler
-
-s3_test = [
-    "play.min.io",
-    "Q3AM3UQ867SPQQA43P2F",
-    "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
-    "us-east-1",
-    "aocrec-test-bucket"
-]
+from mgxhub.config import cfg
 
 
 class TestFileHandler(unittest.IsolatedAsyncioTestCase):
@@ -38,7 +31,13 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
 
         test_obj1 = '/records/7ce24dd2608dec17d85d48c781853997.zip'
         test_obj2 = '/records/717cd3fc274a200ba81a2cc2cc65c288.zip'
-        ossconn = S3Adapter(*s3_test)
+        ossconn = S3Adapter(
+            cfg.get('s3', 'endpoint'),
+            cfg.get('s3', 'accesskey'),
+            cfg.get('s3', 'secretkey'),
+            cfg.get('s3', 'region'),
+            cfg.get('s3', 'bucket')
+        )
         ossconn.remove_object(test_obj1)
         ossconn.remove_object(test_obj2)
 
@@ -48,7 +47,7 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         f2 = os.path.join(script_dir, 'samples/recs_in_zip_tmp.zip')
         copyfile(f1, f2)
 
-        hd = FileHandler(f2, s3_test, False, "", True)
+        hd = FileHandler(f2, False, True)
         result = hd.process()
         self.assertEqual(result['status'], 'success')
         end_time = time.time()
@@ -66,7 +65,13 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         start_time = time.time()
 
         test_obj1 = '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'
-        ossconn = S3Adapter(*s3_test)
+        ossconn = S3Adapter(
+            cfg.get('s3', 'endpoint'),
+            cfg.get('s3', 'accesskey'),
+            cfg.get('s3', 'secretkey'),
+            cfg.get('s3', 'region'),
+            cfg.get('s3', 'bucket')
+        )
         ossconn.remove_object(test_obj1)
         self.assertFalse(ossconn.have(
             '/records/5e3b2a7e604f71c8a3793d41f522639c.zip'))
@@ -77,7 +82,7 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         f2 = os.path.join(script_dir, 'samples/test_record1_tmp.mgx')
         copyfile(f1, f2)
 
-        hd = FileHandler(f2, s3_test, False, "./", True)
+        hd = FileHandler(f2, False, True)
         if os.path.isfile('./d46a6ae13bea04e1744043f5017f9786.png'):
             os.remove('./d46a6ae13bea04e1744043f5017f9786.png')
         result = hd.process()
@@ -103,14 +108,13 @@ class TestFileHandler(unittest.IsolatedAsyncioTestCase):
         with open('test/samples/base64_map.txt', 'r') as f:
             base64_str = f.read()
             hd = FileHandler(
-                'test/test_record1.mgx',
-                s3_creds=s3_test,
-                map_dir='./'
+                'test/test_record1.mgx'
             )
             result = asyncio.run(hd._save_map('testmap', base64_str))
             self.assertEqual(result, 'MAP_SAVE_SUCCESS')
-            self.assertTrue(os.path.isfile("testmap.png"))
-            os.remove("testmap.png")
+            map_path = os.path.join(cfg.get('system', 'mapdir'), "testmap.png")
+            self.assertTrue(os.path.isfile(map_path))
+            os.remove(map_path)
 
 
 class TestRecordParser(unittest.TestCase):
@@ -130,7 +134,7 @@ class TestS3Uploader(unittest.TestCase):
         random_uuid = uuid.uuid4()
         random_filename = str(random_uuid) + '.dat'
 
-        ossconn = S3Adapter(*s3_test)
+        ossconn = S3Adapter(**cfg.s3)
 
         result = ossconn.upload(
             'test/samples/test_record1.mgx',
@@ -153,8 +157,8 @@ class TestEloCalculator(unittest.TestCase):
         engine = create_engine('sqlite:///test_db.sqlite3')
         # Create all tables
         Base.metadata.create_all(engine)
-        _Session = sessionmaker(bind=engine)
-        session = _Session()
+        _session = sessionmaker(bind=engine)
+        session = _session()
         self.calculator = EloCalculator(session)
 
     def test_update_ratings(self):

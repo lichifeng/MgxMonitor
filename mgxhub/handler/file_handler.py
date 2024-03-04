@@ -14,6 +14,7 @@ import patoolib
 from PIL import Image
 from mgxhub.parser import parse
 from mgxhub.storage import S3Adapter
+from mgxhub.config import cfg
 from .db_handler import DBHandler
 
 
@@ -55,9 +56,7 @@ class FileHandler:
     def __init__(
             self,
             file_path: str,
-            s3_creds: list = None,
             s3_replace: bool = False,
-            map_dir: str = "",
             delete_after: bool = False,
             db_handler: DBHandler = None
     ):
@@ -69,16 +68,12 @@ class FileHandler:
         self._delete_after = delete_after
         self._db_handler = db_handler
 
-        if not os.path.isdir(map_dir):
-            self._map_dir = os.environ.get('MAP_DIR')
-        else:
-            self._map_dir = map_dir
-
-        if s3_creds:
-            try:
-                self._s3_conn = S3Adapter(*s3_creds)
-            except Exception as e:
-                print(f'Failed to connect to S3: {e}')
+        self._map_dir = cfg.get('system', 'mapdir')
+        
+        try:
+            self._s3_conn = S3Adapter(**cfg.s3)
+        except Exception as e:
+            print(f'Failed to connect to S3: {e}')
         self._s3_replace = s3_replace
         print(f"Passed to FileHandler: {file_path}")
 
@@ -429,6 +424,7 @@ Packed at {current_time}
             return 'MAP_DIR_NOT_SET'
 
         try:
+            os.makedirs(self._map_dir, exist_ok=True)
             img = Image.open(BytesIO(base64.b64decode(base64_str)))
             img.save(os.path.join(self._map_dir, basename + '.png'))
             return 'MAP_SAVE_SUCCESS'

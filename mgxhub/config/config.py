@@ -16,7 +16,7 @@ class Config(DefaultConfig, metaclass=Singleton):
     from mgxhub.config import Config
 
     config = Config().config
-    print(config['system']['workdir'])
+    print(config.get('system', 'mapdir')) # /path/to/__workdir/map
     ```    
     '''
     

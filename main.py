@@ -9,18 +9,12 @@ from mgxhub.model.webapi import GameDetail
 from mgxhub.handler import DBHandler, FileObjHandler, TmpCleaner
 from mgxhub.rating import RatingLock
 from mgxhub.watcher import RecordWatcher
+from mgxhub.config import cfg
 
-s3_test = [
-        "play.min.io",
-        "Q3AM3UQ867SPQQA43P2F",
-        "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
-        "us-east-1",
-        "aocrec-test-bucket"
-    ]
 
 app = FastAPI()
 db = DBHandler()
-watcher = RecordWatcher(s3_creds=s3_test, db=db)
+watcher = RecordWatcher(db)
 
 
 @app.get("/")
@@ -36,7 +30,7 @@ async def get_langcodes() -> dict[str, list]:
 
     # Scan `translations/` directory for .po files to get available language codes
     lang_codes = []
-    for file in os.listdir('translations/LC_MESSAGES/'):
+    for file in os.listdir(cfg.get('system', 'langdir')):
         if file.endswith('.mo'):
             lang_codes.append(file[:-3])
 
@@ -131,7 +125,6 @@ async def upload_a_record(
     uploaded = FileObjHandler(
         recfile.file, recfile.filename, lastmod,
         {
-            "s3_creds": s3_test,
             "s3_replace": True,
             "delete_after": True,
             "db_handler": db
@@ -142,6 +135,6 @@ async def upload_a_record(
     return uploaded.process()
 
 
-MAP_DIR = os.getenv("MAP_DIR")
+MAP_DIR = cfg.get('system', 'mapdir')
 if MAP_DIR:
     app.mount("/maps", StaticFiles(directory=MAP_DIR), name="maps")

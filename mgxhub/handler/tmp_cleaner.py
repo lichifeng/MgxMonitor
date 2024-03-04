@@ -2,11 +2,10 @@
 
 import os
 import shutil
+from mgxhub.config import cfg
 
-TMPDIR_PREFIX = 'mgxhubtmp_'
-# TMPDIR_DIR is tmp directory of ../../tmp relative to this file
-# aka tmp/ under project root
-TEMPDIR_DIR = os.path.join(os.path.dirname(__file__), '../../__tmp')
+TMPDIR_PREFIX = cfg.get('system', 'tmpprefix')
+TEMPDIR_DIR = cfg.get('system', 'tmpdir')
 
 class TmpCleaner:
     '''Used to handle dangling tmp directories and files created by mgxhub.'''

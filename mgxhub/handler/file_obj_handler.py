@@ -5,8 +5,8 @@ import os
 import shutil
 import tempfile
 from datetime import datetime
+from mgxhub.config import cfg
 from .file_handler import FileHandler
-from .tmp_cleaner import TEMPDIR_DIR, TMPDIR_PREFIX
 
 
 class FileObjHandler(FileHandler):
@@ -44,7 +44,11 @@ class FileObjHandler(FileHandler):
             lastmod_obj = datetime.now()
 
         # Save the file to a temporary location
-        self._tmpdir = tempfile.mkdtemp(prefix=TMPDIR_PREFIX, dir=TEMPDIR_DIR)
+        os.makedirs(cfg.get('system', 'tmpdir'), exist_ok=True)
+        self._tmpdir = tempfile.mkdtemp(
+            prefix=cfg.get('system', 'tmpprefix'), 
+            dir=cfg.get('system', 'tmpdir')
+            )
         recfile = os.path.join(self._tmpdir, filename)
         with open(recfile, 'wb+') as f:
             shutil.copyfileobj(file, f)

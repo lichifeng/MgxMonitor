@@ -11,7 +11,7 @@ class DefaultConfig:
     '''
     
     def __init__(self):
-        self.config = configparser.ConfigParser()
+        self.config = configparser.ConfigParser(default_section='system')
 
         # System configuration
         # - Directories need to be created when used
@@ -24,7 +24,9 @@ class DefaultConfig:
         self.config['system']['logdir'] = os.path.join(self.config['system']['workdir'], 'log')
         self.config['system']['uploaddir'] = os.path.join(self.config['system']['workdir'], 'upload')
         self.config['system']['tmpdir'] = os.path.join(self.config['system']['workdir'], 'tmp')
+        self.config['system']['tmpprefix'] = 'tmp_'
         self.config['system']['errordir'] = os.path.join(self.config['system']['workdir'], 'error')
+        self.config['system']['langdir'] = os.path.join(self.project_root(), 'translations/en/LC_MESSAGES') # read-only
         self.config['system']['loglevel'] = 'INFO'
         self.config['system']['logdest'] = 'console' # if not 'console', will try to use log file
 
