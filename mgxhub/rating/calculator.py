@@ -75,9 +75,9 @@ class EloCalculator:
         winner_hash_list = [nh for nh, _ in self._winners_cache]
         loser_hash_list = [nh for nh, _ in self._losers_cache]
         if len(winner_hash_list) != len(set(winner_hash_list)) or len(loser_hash_list) != len(set(loser_hash_list)):
-            logger.warning(f"Duplicate name_hash detected in {self._current_game_guid}")
+            logger.debug(f"Duplicate name_hash detected in {self._current_game_guid}")
         elif len(self._winners_cache) == 0 or len(self._losers_cache) == 0:
-            logger.warning(f"Empty winners or losers in {self._current_game_guid}")
+            logger.debug(f"Empty winners or losers in {self._current_game_guid}")
         else:
             # Calculate average rating of previous game's winners and losers
             rating_winner = fmean([col[nh]["rating"] for nh, _ in self._winners_cache])
@@ -110,6 +110,7 @@ class EloCalculator:
             Game.version_code,
             Game.matchup,
             Player.name_hash,
+            Player.name,
             Player.is_winner,
             Game.game_time
         ).join(
@@ -125,7 +126,7 @@ class EloCalculator:
         col = {}
         # Execute the query in batches
         for row in self._fetch_in_batches(query, batch_size):
-            game_guid, version_code, matchup, name_hash, is_winner, game_time = row
+            game_guid, version_code, matchup, name_hash, player_name, is_winner, game_time = row
 
             if self._current_game_guid is None:
                 self._current_game_guid = game_guid
@@ -151,6 +152,7 @@ class EloCalculator:
             # if still the same game, append to winners or losers
             if name_hash not in col:
                 col[name_hash] = {
+                    "name": player_name,
                     "rating": 1600,
                     "total": 0,
                     "wins": 0,
@@ -201,9 +203,10 @@ class EloCalculator:
             for matchup, players in col.items():
                 for name_hash, player in players.items():
                     mappings.append({
+                        'name': player["name"],
+                        'name_hash': name_hash,
                         'version_code': version_code,
                         'matchup': matchup,
-                        'name_hash': name_hash,
                         'rating': player["rating"],
                         'wins': player["wins"],
                         'total': player["total"],

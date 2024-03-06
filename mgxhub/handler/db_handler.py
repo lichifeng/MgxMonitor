@@ -5,10 +5,10 @@ This version is for SQLite only. Need modification for other databases.
 import os
 from datetime import datetime
 from hashlib import md5
-from sqlalchemy import create_engine, asc, text
+from sqlalchemy import create_engine, asc, text, desc, func
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.sqlite import insert
-from mgxhub.model.orm import Base, Game, Player, File, Chat, LegacyInfo
+from mgxhub.model.orm import Base, Game, Player, File, Chat, LegacyInfo, Rating
 from mgxhub.model.webapi import GameDetail
 from mgxhub.config import cfg
 from mgxhub.logger import logger
@@ -249,7 +249,7 @@ class DBHandler:
         return False
 
 
-    def stat_index_count(self) -> dict:
+    def fetch_index_stats(self) -> dict:
         '''Unique games/players count, new games this month.'''
 
         query = text("""
@@ -270,7 +270,7 @@ class DBHandler:
         return stats
 
 
-    def stat_rand_players(self, threshold: int = 10, limit: int = 300) -> dict:
+    def fetch_rand_players(self, threshold: int = 10, limit: int = 300) -> dict:
         '''Random players.
 
         Including total games of each player. Used mainly in player cloud.
@@ -302,7 +302,7 @@ class DBHandler:
         return {'players': players, 'generated_at': current_time}
 
 
-    def stat_latest_players(self, limit: int = 300) -> dict:
+    def fetch_latest_players(self, limit: int = 300) -> dict:
         '''Newly found players.
 
         Including won games, total games, and 1v1 games counts.
@@ -337,7 +337,7 @@ class DBHandler:
         return {'players': players, 'generated_at': current_time}
 
 
-    def stat_close_friends(self, name_hash: str, limit: int = 100) -> list:
+    def fetch_close_friends(self, name_hash: str, limit: int = 100) -> list:
         '''Players who played with the given player most.
 
         Args:
@@ -367,6 +367,121 @@ class DBHandler:
         current_time = datetime.now().isoformat()
         return {'players': players, 'generated_at': current_time}
 
-    def filter_games(self, filters: dict, limit: int = 100) -> list:
-        '''Filter games by given conditions.'''
-        pass
+
+    def fetch_latest_games(self, limit: int = 20) -> dict:
+        '''Get recently uploaded games.
+
+        Args:
+            limit: maximum number of games to be included.
+        '''
+
+        query = text("""
+            WITH latest_games AS (
+                SELECT 
+                    g.game_guid, g.version_code, g.created, g.map_name, g.matchup, g.duration, g.speed, f.recorder_slot
+                FROM 
+                    (SELECT * FROM games ORDER BY created DESC LIMIT :limit) AS g
+                JOIN 
+                    files AS f ON g.game_guid = f.game_guid
+                WHERE 
+                    f.created = (SELECT MIN(created) FROM files WHERE game_guid = g.game_guid)
+            )
+            SELECT latest_games.*, p.name 
+            FROM latest_games
+            JOIN players AS p ON latest_games.game_guid = p.game_guid AND latest_games.recorder_slot = p.slot;
+        """)
+
+        result = self.session.execute(query, {'limit': limit})
+        games = [list(row) for row in result.fetchall()]
+        current_time = datetime.now().isoformat()
+        return {'games': games, 'generated_at': current_time}
+
+
+    def fetch_rand_games(self, threshold: int = 10, limit: int = 50) -> dict:
+        '''Get random games.
+
+        Args:
+            threshold: minimum duration in minutes.
+            limit: maximum number of games to be included.
+        '''
+
+        query = text("""
+            SELECT 
+                game_guid, version_code, created, map_name, matchup, duration, speed 
+            FROM games 
+            WHERE duration > :threshold 
+            ORDER BY RANDOM()
+            LIMIT :limit;
+        """)
+
+        result = self.session.execute(query, {'threshold': threshold * 60, 'limit': limit})
+        games = [list(row) for row in result.fetchall()]
+        current_time = datetime.now().isoformat()
+        return {'games': games, 'generated_at': current_time}
+
+
+    def fetch_rating_meta(self) -> dict:
+        '''Get rating meta data.'''
+
+        query = text("""
+            SELECT version_code, COUNT(*) as count
+            FROM ratings
+            GROUP BY version_code
+            ORDER BY count DESC;
+        """)
+
+        result = self.session.execute(query)
+        meta = [tuple(row) for row in result.fetchall()]
+        current_time = datetime.now().isoformat()
+        return {'meta': meta, 'generated_at': current_time}
+
+    async def async_fetch_rating_meta(self) -> dict:
+        '''Async version of fetch_rating_meta()'''
+
+        return self.fetch_rating_meta()
+
+
+    def fetch_rating(
+            self, 
+            version_code: str = 'AOC10', 
+            matchup: str = '1v1', 
+            order: str = 'desc',
+            offset: int = 0,
+            limit: int = 100
+    ) -> dict:
+        '''Get ratings information.
+
+        Args:
+            version_code: Version code of the game.
+            matchup: Matchup of the game.
+            limit: maximum number of players to be included.
+        '''
+
+        matchup_value = '1v1' if matchup.lower() == '1v1' else 'team'
+        order_method = desc if order.lower() == 'desc' else asc
+
+        ratings = self.session.query(
+                        Rating.name,
+                        Rating.name_hash, 
+                        Rating.rating,
+                        Rating.total,
+                        Rating.wins,
+                        Rating.streak,
+                        Rating.streak_max,
+                        Rating.highest,
+                        Rating.lowest,
+                        Rating.first_played,
+                        Rating.last_played
+                    )\
+                    .filter(
+                        Rating.version_code == version_code, 
+                        Rating.matchup == matchup_value
+                    )\
+                    .order_by(order_method(Rating.rating))\
+                    .limit(limit)\
+                    .offset(offset)\
+                    .all()
+
+        ratings = [list(row) for row in ratings]
+        current_time = datetime.now().isoformat()
+        return {'ratings': ratings, 'generated_at': current_time}

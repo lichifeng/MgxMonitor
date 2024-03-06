@@ -175,9 +175,10 @@ class Rating(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
+    name = Column(String(255))
+    name_hash = Column(String(32), index=True)
     version_code = Column(String(10))
     matchup = Column(String(20))
-    name_hash = Column(String(32), index=True)
     rating = Column(Integer)
     wins = Column(Integer)
     total = Column(Integer)

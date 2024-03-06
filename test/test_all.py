@@ -137,7 +137,7 @@ class TestEloCalculator(unittest.TestCase):
 
     def setUp(self):
         # Create a new EloCalculator for each test
-        engine = create_engine('sqlite:///test_db.sqlite3')
+        engine = create_engine('sqlite:///../test_db2.sqlite3')
         # Create all tables
         Base.metadata.create_all(engine)
         _session = sessionmaker(bind=engine)

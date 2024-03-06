@@ -1,15 +1,17 @@
 '''Main entry point of the application'''
 
 import os
+import io
 from datetime import datetime
 from typing import Annotated
 from fastapi import FastAPI, HTTPException, Form, UploadFile, File
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import PlainTextResponse
 from mgxhub.model.webapi import GameDetail
 from mgxhub.handler import DBHandler, FileObjHandler, TmpCleaner
 from mgxhub.rating import RatingLock
 from mgxhub.watcher import RecordWatcher
-from mgxhub.config import cfg, Config
+from mgxhub.config import cfg, Config, DefaultConfig
 
 Config().load('testconf.ini')
 app = FastAPI()
@@ -21,6 +23,25 @@ async def ping():
     '''Test the server is online or not'''
 
     return {"time": f"{datetime.now()}", "status": "online"}
+
+
+@app.get("/system/config/default", response_class=PlainTextResponse)
+async def download_default_config() -> str:
+    '''Download default configuration file'''
+
+    default_conf = DefaultConfig()
+    string_io = io.StringIO()
+    default_conf.config.write(string_io)
+    return string_io.getvalue()
+
+
+@app.get("/system/config/current", response_class=PlainTextResponse)
+async def download_current_config() -> str:
+    '''Download current configuration file'''
+
+    string_io = io.StringIO()
+    cfg.write(string_io)
+    return string_io.getvalue()
 
 
 @app.get("/system/langcodes")
@@ -50,14 +71,17 @@ async def get_rating_status() -> dict:
 
 
 @app.get("/system/rating/start")
-async def start_rating_calc() -> dict:
+async def start_rating_calc(
+    batch_size: str = cfg.get('rating', 'batchsize'), 
+    duration_threshold: str = cfg.get('rating', 'durationthreshold')
+) -> dict:
     '''Start the rating calculation process.'''
 
     lock = RatingLock()
     if lock.rating_running():
         raise HTTPException(status_code=409, detail="Rating calculation process is already running")
 
-    lock.start_calc()
+    lock.start_calc(batch_size=batch_size, duration_threshold=duration_threshold)
     raise HTTPException(status_code=202, detail="Rating calculation process started")
 
 
@@ -132,32 +156,72 @@ async def upload_a_record(
     return uploaded.process()
 
 
-@app.get("/stats/index")
+@app.get("/fetch/indexstats")
 async def get_index_stats() -> dict:
     '''Get index stats'''
 
-    return db.stat_index_count()
+    return db.fetch_index_stats()
 
 
-@app.get("/stats/randplayers")
+@app.get("/fetch/randplayers")
 async def get_rand_players(threshold: int = 10, limit: int = 300) -> dict:
-    '''Fetch 300 random players and their game counts'''
+    '''Fetch random players and their game counts'''
 
-    return db.stat_rand_players(threshold, limit)
+    return db.fetch_rand_players(threshold, limit)
 
 
-@app.get("/stats/latestplayers")
+@app.get("/fetch/randgames")
+async def get_rand_games(threshold: int = 10, limit: int = 50) -> dict:
+    '''Fetch random games'''
+
+    return db.fetch_rand_games(threshold, limit)
+
+
+@app.get("/fetch/latestplayers")
 async def get_latest_players(limit: int = 20) -> dict:
     '''Fetch latest 20 players and their game counts'''
 
-    return db.stat_latest_players(limit)
+    return db.fetch_latest_players(limit)
 
 
-@app.get("/stats/closefriends")
+@app.get("/fetch/closefriends")
 async def get_close_friends(player_hash: str, limit: int = 100) -> dict:
     '''Fetch close friends of a player'''
 
-    return db.stat_close_friends(player_hash.lower(), limit)
+    return db.fetch_close_friends(player_hash.lower(), limit)
+
+
+@app.get("/fetch/latestgames")
+async def get_latest_games(limit: int = 100) -> dict:
+    '''Fetch recently uploaded games
+    
+    - **limit**: The number of games to fetch. Default is 100.
+
+    Returned data format:
+        [game_guid, version_code, created_time, map_name, matchup, speed, duration, uploader]
+    '''
+
+    return db.fetch_latest_games(limit)
+
+
+@app.get("/fetch/ratingmeta")
+async def get_rating_meta() -> dict:
+    '''Fetch rating metadata'''
+
+    return db.fetch_rating_meta()
+
+
+@app.get("/fetch/rating")
+async def get_rating_table(
+    version_code: str = 'AOC10', 
+    matchup: str = 'team', 
+    order: str = 'desc',
+    offset: int = 0,
+    limit: int = 100
+) -> dict:
+    '''Fetch rating ladder'''
+
+    return db.fetch_rating(version_code, matchup, order, offset, limit)
 
 
 MAP_DIR = cfg.get('system', 'mapdir')

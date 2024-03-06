@@ -86,7 +86,11 @@ class RatingLock:
         return time.time() - self.started_time
 
 
-    def start_calc(self):
+    def start_calc(
+            self, 
+            batch_size: str = cfg.get('rating', 'batchsize'), 
+            duration_threshold: str = cfg.get('rating', 'durationthreshold')
+            ):
         """Start the rating calculation process."""
 
         if self.rating_running():
@@ -97,7 +101,12 @@ class RatingLock:
 
             # Start a new thread to run the mgxhub.rating module, it does not
             # wait for the new thread to finish
-            subprocess.Popen([current_interpreter, '-m', 'mgxhub.rating', '--db_path', cfg.get('database', 'sqlite')])
+            subprocess.Popen([current_interpreter, 
+                              '-m', 'mgxhub.rating', 
+                              '--db_path', cfg.get('database', 'sqlite'), 
+                              '--batch_size', batch_size,
+                              '--duration_threshold', duration_threshold
+                              ])
 
 
     def unlock(self, force=False):

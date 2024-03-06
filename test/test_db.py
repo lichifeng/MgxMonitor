@@ -9,7 +9,7 @@ class TestDBHandler(unittest.TestCase):
         self.db_handler = DBHandler()
 
     def test_stat_index_count(self):
-        stats = self.db_handler.stat_index_count()
+        stats = self.db_handler.fetch_index_stats()
         print(stats)
         
         self.assertIsInstance(stats, dict)
@@ -20,21 +20,21 @@ class TestDBHandler(unittest.TestCase):
         self.assertGreater(stats['unique_players'], 0)
 
     def test_stat_rand_players(self):
-        stats = self.db_handler.stat_rand_players(10, 100)
+        stats = self.db_handler.fetch_rand_players(10, 100)
         print(stats)
         
         self.assertIsInstance(stats, dict)
         self.assertIn('players', stats)
 
     def test_stat_latest_players(self):
-        stats = self.db_handler.stat_latest_players(20)
+        stats = self.db_handler.fetch_latest_players(20)
         print(stats)
         
         self.assertIsInstance(stats, dict)
         self.assertIn('players', stats)
 
     def test_stat_close_friends(self):
-        stats = self.db_handler.stat_close_friends('_XJL_6.25平静', 100)
+        stats = self.db_handler.fetch_close_friends('_XJL_6.25平静', 100)
         print(stats)
         
         self.assertIsInstance(stats, dict)
