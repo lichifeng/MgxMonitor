@@ -132,6 +132,34 @@ async def upload_a_record(
     return uploaded.process()
 
 
+@app.get("/stats/index")
+async def get_index_stats() -> dict:
+    '''Get index stats'''
+
+    return db.stat_index_count()
+
+
+@app.get("/stats/randplayers")
+async def get_rand_players(threshold: int = 10, limit: int = 300) -> dict:
+    '''Fetch 300 random players and their game counts'''
+
+    return db.stat_rand_players(threshold, limit)
+
+
+@app.get("/stats/latestplayers")
+async def get_latest_players(limit: int = 20) -> dict:
+    '''Fetch latest 20 players and their game counts'''
+
+    return db.stat_latest_players(limit)
+
+
+@app.get("/stats/closefriends")
+async def get_close_friends(player_hash: str, limit: int = 100) -> dict:
+    '''Fetch close friends of a player'''
+
+    return db.stat_close_friends(player_hash.lower(), limit)
+
+
 MAP_DIR = cfg.get('system', 'mapdir')
 if MAP_DIR:
     app.mount("/maps", StaticFiles(directory=MAP_DIR), name="maps")

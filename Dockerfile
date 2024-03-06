@@ -1,27 +1,29 @@
-FROM python:slim as builder
+FROM node:20.11.1-alpine3.19 as builder
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake git curl \
-    libpng-dev libssl-dev
-RUN curl -fsSL https://deb.nodesource.com/setup_21.x | bash - 
-RUN apt-get install -y nodejs
-RUN git clone https://github.com/lichifeng/MgxParser.git
-WORKDIR /MgxParser
-RUN cd /MgxParser
+WORKDIR /root
+
+RUN apk add --no-cache git \
+    && git clone https://github.com/lichifeng/MgxParser.git
+
+WORKDIR /root/MgxParser
+
+RUN apk add --no-cache \
+    alpine-sdk \
+    cmake \
+    libpng-dev openssl-dev
 RUN npm install
-RUN npx cmake-js rebuild -p $(nproc)
+RUN npx cmake-js rebuild --CDBUILD_STATIC=OFF -p $(nproc)
 
 
-FROM python:slim
+FROM python:alpine3.19
 
 WORKDIR /mgxhub
 
 COPY . .
-COPY --from=builder /MgxParser/build/MgxParser_D_EXE /mgxhub/mgxhub/parser/
-COPY --from=builder /MgxParser/build/Release/libMgxParser_SHARED.so /mgxhub/mgxhub/parser/
+COPY --from=builder /root/MgxParser/build/Release/MgxParser_D_EXE /mgxhub/mgxhub/parser/
+COPY --from=builder /root/MgxParser/build/Release/libMgxParser_SHARED.so /mgxhub/mgxhub/parser/
 
-RUN apt-get update && apt-get install -y libpng16-16 openssl curl
+RUN apk update && apk add --no-cache libpng openssl libstdc++ libgcc
 
 RUN pip install --no-cache-dir -r requirements.txt
 

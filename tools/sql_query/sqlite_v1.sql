@@ -6,7 +6,7 @@ UNION ALL
 SELECT 'Mounthly new games', COUNT(*) FROM games WHERE strftime('%m', modified) = strftime('%m', datetime('now', '-1 month')) AND strftime('%Y', modified) = strftime('%Y', 'now');
 
 -- 提取随便机家ID云（含玩家参加过的游戏数量）
-SELECT name, game_count FROM (
+SELECT name, name_hash, game_count FROM (
     SELECT name, COUNT(game_guid) as game_count
     FROM players
     GROUP BY name

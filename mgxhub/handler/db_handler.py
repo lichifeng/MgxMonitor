@@ -2,9 +2,10 @@
 This version is for SQLite only. Need modification for other databases.
 '''
 
+import os
 from datetime import datetime
 from hashlib import md5
-from sqlalchemy import create_engine, asc
+from sqlalchemy import create_engine, asc, text
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.sqlite import insert
 from mgxhub.model.orm import Base, Game, Player, File, Chat, LegacyInfo
@@ -41,10 +42,11 @@ class DBHandler:
             db_path: Path to the database file.
         '''
 
+        db_path = os.path.join(cfg.get('system', 'projectroot'), db_path)
         self._db_engine = create_engine(f"sqlite:///{db_path}", echo=False)
         Base.metadata.create_all(self._db_engine)
         self._db_session = Session(self._db_engine)
-        logger.debug(f"Database loaded: {db_path}")
+        logger.debug(f"Database loaded: {db_path}") # Watcher thread will print this, too.
 
 
     def __del__(self):
@@ -249,24 +251,58 @@ class DBHandler:
 
     def stat_index_count(self) -> dict:
         '''Unique games/players count, new games this month.'''
-        
-        pass
+
+        query = text("""
+            SELECT 'unique_games', COUNT(DISTINCT game_guid) AS count FROM games
+            UNION ALL
+            SELECT 'unique_players', COUNT(DISTINCT name_hash) FROM players
+            UNION ALL
+            SELECT 'monthly_games', COUNT(*) FROM games WHERE strftime('%m', modified) = strftime('%m', datetime('now', '-1 month')) AND strftime('%Y', modified) = strftime('%Y', 'now')
+        """)
+
+        result = self.session.execute(query)
+        results = result.fetchall()
+        stats = {name: count for name, count in results}
+
+        # Add the current time to the stats
+        stats['generated_at'] = datetime.now().isoformat()
+
+        return stats
 
 
-    def stat_rand_players(self, threshold: int = 10, limit: int = 300) -> list:
+    def stat_rand_players(self, threshold: int = 10, limit: int = 300) -> dict:
         '''Random players.
 
         Including total games of each player. Used mainly in player cloud.
 
         Args:
             threshold: minimum games of a player to be included.
-            limit: maximum number of players to be included.
+            limit: maximum number of players to be included. Max is 1000.
         '''
-        
-        pass
+
+        if not isinstance(threshold, int) or threshold <= 0:
+            threshold = 10
+        if not isinstance(limit, int) or limit <= 0 or limit > 1000:
+            limit = 300
+
+        query = text("""
+            SELECT name, game_count FROM (
+                SELECT name, COUNT(game_guid) as game_count
+                FROM players
+                GROUP BY name
+                HAVING game_count > :threshold
+            ) AS player_counts
+            ORDER BY RANDOM()
+            LIMIT :limit
+        """)
+
+        result = self.session.execute(query, {'threshold': threshold, 'limit': limit})
+        players = [{'name': row.name, 'name_hash': md5(str(row.name).encode('utf-8')).hexdigest(), 'game_count': row.game_count} for row in result]
+        current_time = datetime.now().isoformat()
+        return {'players': players, 'generated_at': current_time}
 
 
-    def stat_last_players(self, limit: int = 300) -> list:
+    def stat_latest_players(self, limit: int = 300) -> dict:
         '''Newly found players.
 
         Including won games, total games, and 1v1 games counts.
@@ -275,13 +311,61 @@ class DBHandler:
             limit: maximum number of players to be included.
         '''
 
-        pass
+        query = text("""
+            SELECT 
+                ep.name, 
+                ep.latest_created, 
+                (SELECT COUNT(*) FROM players WHERE name = ep.name AND is_winner = 1) AS win_count,
+                (SELECT COUNT(*) FROM players WHERE name = ep.name) AS total_games,
+                (SELECT COUNT(*) FROM games g JOIN players p ON g.game_guid = p.game_guid WHERE p.name = ep.name AND g.matchup = '1v1') AS total_1v1_games
+            FROM 
+                (SELECT 
+                    name,
+                    MAX(created) AS latest_created
+                FROM 
+                    players
+                GROUP BY 
+                    name
+                LIMIT :limit) AS ep
+            ORDER BY 
+                ep.latest_created DESC;
+        """)
+
+        result = self.session.execute(query, {'limit': limit})
+        players = [list(row) for row in result.fetchall()]
+        current_time = datetime.now().isoformat()
+        return {'players': players, 'generated_at': current_time}
 
 
-    def stat_close_friends(self, player_name: str, limit: int = 300) -> list:
-        '''Players who played with the given player most.'''
-        
-        pass
+    def stat_close_friends(self, name_hash: str, limit: int = 100) -> list:
+        '''Players who played with the given player most.
+
+        Args:
+            name_hash: the name_hash of the player.
+            limit: maximum number of players to be included.
+        '''
+
+        query = text("""
+            SELECT 
+                p2.name, 
+                COUNT(*) AS common_games_count
+            FROM 
+                players p1
+            JOIN 
+                players p2 ON p1.game_guid = p2.game_guid
+            WHERE 
+                p1.name_hash = :name_hash AND p1.name != p2.name
+            GROUP BY 
+                p2.name
+            ORDER BY 
+                common_games_count DESC
+            LIMIT :limit;
+        """)
+
+        result = self.session.execute(query, {'name_hash': name_hash, 'limit': limit})
+        players = [list(row) for row in result.fetchall()]
+        current_time = datetime.now().isoformat()
+        return {'players': players, 'generated_at': current_time}
 
     def filter_games(self, filters: dict, limit: int = 100) -> list:
         '''Filter games by given conditions.'''
