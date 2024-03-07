@@ -2,6 +2,7 @@
 
 import os
 import io
+import asyncio
 from datetime import datetime
 from typing import Annotated
 from fastapi import FastAPI, HTTPException, Form, UploadFile, File
@@ -216,12 +217,44 @@ async def get_rating_table(
     version_code: str = 'AOC10', 
     matchup: str = 'team', 
     order: str = 'desc',
-    offset: int = 0,
-    limit: int = 100
+    page: int = 0,
+    page_size: int = 100
 ) -> dict:
     '''Fetch rating ladder'''
 
-    return db.fetch_rating(version_code, matchup, order, offset, limit)
+    return db.fetch_rating(version_code, matchup, order, page, page_size)
+
+
+@app.get("/fetch/rating/player")
+async def get_player_rating(
+    player_hash: str,
+    version_code: str = 'AOC10', 
+    matchup: str = 'team', 
+    order: str = 'desc',
+    page_size: int = 100
+) -> dict:
+    '''Fetch rating of a player'''
+
+    return db.fetch_player_rating(player_hash, version_code, matchup, order, page_size)
+
+
+@app.get("/fetch/player/comprehensive")
+async def get_player_comprehensive(player_hash: str) -> dict:
+    '''Fetch comprehensive information of a player'''
+
+    result = await asyncio.gather(
+        db.async_fetch_player_totals(player_hash),
+        db.async_fetch_player_rating_stats(player_hash),
+        db.async_fetch_player_recent_games(player_hash),
+        db.async_fetch_close_friends(player_hash)
+    )
+
+    return {
+        "totals": result[0],
+        "ratings": result[1].get('stats', []),
+        "recent_games": result[2].get('games', []),
+        "close_friends": result[3].get('players', [])
+    }
 
 
 MAP_DIR = cfg.get('system', 'mapdir')

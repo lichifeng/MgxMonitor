@@ -10,7 +10,7 @@ import math
 from statistics import fmean
 from sqlalchemy.orm import Session, Query
 from sqlalchemy.exc import OperationalError
-from sqlalchemy import text, and_
+from sqlalchemy import text, and_, update
 from mgxhub.model.orm import Rating, Player, Game
 from mgxhub.logger import logger
 
@@ -24,6 +24,7 @@ class EloCalculator:
     _current_game_guid: str | None = None
     _winners_cache = []
     _losers_cache = []
+    _change_buffer = []
 
     def __init__(self, session: Session, K: int = 32):
         self._K = K
@@ -94,12 +95,14 @@ class EloCalculator:
                 p["highest"] = max(p["rating"], p["highest"])
                 p["streak"] += 1
                 p["streak_max"] = max(p["streak"], p["streak_max"])
+                self._change_buffer.append({"id": p["player_id"], "rating_change": delta_winner})
 
             for _, p in self._losers_cache:
                 p["rating"] += delta_loser
                 p["total"] += 1
                 p["lowest"] = min(p["rating"], p["lowest"])
                 p["streak"] = 0
+                self._change_buffer.append({"id": p["player_id"], "rating_change": delta_loser})
 
 
     def _generate_rating_cache(self, duration_threshold: int = 15 * 60 * 1000, batch_size: int | None = None) -> None:
@@ -112,7 +115,8 @@ class EloCalculator:
             Player.name_hash,
             Player.name,
             Player.is_winner,
-            Game.game_time
+            Game.game_time, 
+            Player.id
         ).join(
             Game, Player.game_guid == Game.game_guid
         ).filter(
@@ -122,11 +126,11 @@ class EloCalculator:
             Game.game_time, Player.game_guid, Player.is_winner
         )
 
-        i = 0
+        processed_count = 0
         col = {}
         # Execute the query in batches
         for row in self._fetch_in_batches(query, batch_size):
-            game_guid, version_code, matchup, name_hash, player_name, is_winner, game_time = row
+            game_guid, version_code, matchup, name_hash, player_name, is_winner, game_time, player_id = row
 
             if self._current_game_guid is None:
                 self._current_game_guid = game_guid
@@ -134,8 +138,11 @@ class EloCalculator:
             if game_guid != self._current_game_guid:
                 # Update the ratings for the previous game
                 self._update_game_ratings(col)
-                # print(f"[{i}] {self._current_game_guid}")
-                i += 1
+                # print(f"[{processed_count}] {self._current_game_guid}")
+                processed_count += 1
+                if processed_count % 10000 == 0:
+                    self._session.execute(update(Player), self._change_buffer)
+                    self._change_buffer.clear()
 
                 # Reset the winners and losers for the next game
                 self._current_game_guid = game_guid
@@ -161,7 +168,8 @@ class EloCalculator:
                     "streak": 0,
                     "streak_max": 0,
                     "first_played": game_time,
-                    "last_played": game_time
+                    "last_played": game_time,
+                    "player_id": player_id
                 }
             else:
                 col[name_hash]["last_played"] = game_time

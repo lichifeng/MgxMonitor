@@ -2,13 +2,15 @@
 This version is for SQLite only. Need modification for other databases.
 '''
 
+# pylint: disable=E1102
+
 import os
 from datetime import datetime
 from hashlib import md5
-from sqlalchemy import create_engine, asc, text, desc, func
+from sqlalchemy import create_engine, asc, desc, text, func
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.sqlite import insert
-from mgxhub.model.orm import Base, Game, Player, File, Chat, LegacyInfo, Rating
+from mgxhub.model.orm import Base, Game, Player, File, Chat, LegacyInfo
 from mgxhub.model.webapi import GameDetail
 from mgxhub.config import cfg
 from mgxhub.logger import logger
@@ -367,6 +369,11 @@ class DBHandler:
         current_time = datetime.now().isoformat()
         return {'players': players, 'generated_at': current_time}
 
+    async def async_fetch_close_friends(self, name_hash: str, limit: int = 100) -> list:
+        '''Async version of fetch_close_friends()'''
+
+        return self.fetch_close_friends(name_hash, limit)
+
 
     def fetch_latest_games(self, limit: int = 20) -> dict:
         '''Get recently uploaded games.
@@ -442,46 +449,194 @@ class DBHandler:
 
 
     def fetch_rating(
-            self, 
-            version_code: str = 'AOC10', 
-            matchup: str = '1v1', 
-            order: str = 'desc',
-            offset: int = 0,
-            limit: int = 100
+                    self, 
+                    version_code: str = 'AOC10', 
+                    matchup: str = '1v1', 
+                    order: str = 'desc',
+                    page: int = 0,
+                    page_size: int = 100,
     ) -> dict:
         '''Get ratings information.
 
         Args:
             version_code: Version code of the game.
             matchup: Matchup of the game.
-            limit: maximum number of players to be included.
+            page_size: page size of the result.
         '''
 
         matchup_value = '1v1' if matchup.lower() == '1v1' else 'team'
-        order_method = desc if order.lower() == 'desc' else asc
+        order_method = 'DESC' if order.lower() == 'desc' else 'ASC'
+        if page < 0 or page_size < 1:
+            return {'ratings': [], 'generated_at': datetime.now().isoformat()}
 
-        ratings = self.session.query(
-                        Rating.name,
-                        Rating.name_hash, 
-                        Rating.rating,
-                        Rating.total,
-                        Rating.wins,
-                        Rating.streak,
-                        Rating.streak_max,
-                        Rating.highest,
-                        Rating.lowest,
-                        Rating.first_played,
-                        Rating.last_played
-                    )\
-                    .filter(
-                        Rating.version_code == version_code, 
-                        Rating.matchup == matchup_value
-                    )\
-                    .order_by(order_method(Rating.rating))\
-                    .limit(limit)\
-                    .offset(offset)\
-                    .all()
+        sql = text(f"""
+            SELECT ROW_NUMBER() OVER (ORDER BY rating {order_method}) AS rownum,
+                name,
+                name_hash,
+                rating,
+                total,
+                wins,
+                streak,
+                streak_max,
+                highest,
+                lowest,
+                first_played,
+                last_played
+            FROM ratings
+            WHERE version_code = :version_code AND matchup = :matchup_value 
+            ORDER BY rating {order_method}
+            LIMIT :page_size
+            OFFSET :page;
+        """)
 
+        ratings = self.session.execute(
+            sql,
+            {
+                "version_code": version_code, 
+                "matchup_value": matchup_value, 
+                "page_size": page_size, 
+                "page": page * page_size
+            }
+        ).fetchall()
         ratings = [list(row) for row in ratings]
         current_time = datetime.now().isoformat()
         return {'ratings': ratings, 'generated_at': current_time}
+
+    
+    def fetch_player_rating(
+                    self, 
+                    name_hash: str,
+                    version_code: str = 'AOC10', 
+                    matchup: str = '1v1', 
+                    order: str = 'desc',
+                    page_size: int = 100,
+    ) -> dict:
+        '''Get ratings information of a player.
+
+        Args:
+            name_hash: the name_hash of the player.
+            version_code: Version code of the game.
+            matchup: Matchup of the game.
+            page_size: page size.
+        '''
+
+        matchup_value = '1v1' if matchup.lower() == '1v1' else 'team'
+        order_method = 'DESC' if order.lower() == 'desc' else 'ASC'
+        if page_size < 1:
+            return {'ratings': [], 'generated_at': datetime.now().isoformat()}
+
+        sql = text(f"""
+            WITH rating_table AS (
+                SELECT ROW_NUMBER() OVER (ORDER BY rating {order_method}) AS rownum,
+                    name,
+                    name_hash,
+                    rating,
+                    total,
+                    wins,
+                    streak,
+                    streak_max,
+                    highest,
+                    lowest,
+                    first_played,
+                    last_played
+                FROM ratings
+                WHERE version_code = :version_code AND matchup = :matchup_value
+                ORDER BY rating {order_method}
+            ), name_hash_index AS (
+                SELECT rownum FROM rating_table WHERE name_hash = :name_hash
+            )
+            SELECT * FROM rating_table
+            WHERE rownum > (SELECT rownum FROM name_hash_index) / :page_size * :page_size AND rownum <= ((SELECT rownum FROM name_hash_index) / :page_size + 1) * :page_size
+            ORDER BY rownum 
+            LIMIT :page_size;
+        """)
+
+        ratings = self.session.execute(
+            sql,
+            {
+                "version_code": version_code, 
+                "matchup_value": matchup_value, 
+                "page_size": page_size, 
+                "name_hash": name_hash.lower() if name_hash else None
+            }
+        ).fetchall()
+        ratings = [list(row) for row in ratings]
+        current_time = datetime.now().isoformat()
+        return {'ratings': ratings, 'generated_at': current_time}
+
+
+    def fetch_player_totals(self, name_hash: str) -> dict:
+        '''Get profile of a player.
+
+        Args:
+            name_hash: the name_hash of the player.
+        '''
+
+        total_games = self.session.query(func.count(Game.game_guid.distinct()))\
+            .join(Player, Game.game_guid == Player.game_guid).filter(Player.name_hash == name_hash).scalar()
+        total_wins = self.session.query(func.count(Game.game_guid.distinct()))\
+            .join(Player, Game.game_guid == Player.game_guid).filter(Player.name_hash == name_hash, Player.is_winner).scalar()
+        total_1v1 = self.session.query(func.count(Game.game_guid.distinct()))\
+            .join(Player, Game.game_guid == Player.game_guid).filter(Player.name_hash == name_hash, Game.matchup == '1v1').scalar()
+
+        return {"total_games": total_games, "total_wins": total_wins, "total_1v1_games": total_1v1}
+    
+    async def async_fetch_player_totals(self, name_hash: str) -> dict:
+        '''Async version of fetch_player_totals()'''
+
+        return self.fetch_player_totals(name_hash)
+
+
+    def fetch_player_rating_stats(self, name_hash: str) -> dict:
+        '''Get rating stats of a player.
+
+        Args:
+            name_hash: the name_hash of the player.
+        '''
+
+        query = text("""
+            SELECT 
+                name, name_hash, version_code, matchup, \
+                rating, wins, total, streak, streak_max, \
+                highest, lowest, first_played, last_played
+            FROM 
+                ratings
+            WHERE 
+                name_hash = :name_hash
+            GROUP BY 
+                version_code, matchup;
+        """)
+
+        result = self.session.execute(query, {'name_hash': name_hash})
+        stats = [tuple(row) for row in result.fetchall()]
+        current_time = datetime.now().isoformat()
+        return {'stats': stats, 'generated_at': current_time}
+    
+    async def async_fetch_player_rating_stats(self, name_hash: str) -> dict:
+        '''Async version of fetch_player_rating_stats()'''
+
+        return self.fetch_player_rating_stats(name_hash)
+
+
+    def fetch_player_recent_games(self, name_hash: str, limit: int = 50) -> dict:
+        '''Get recent games of a player.
+
+        Args:
+            name_hash: the name_hash of the player.
+            limit: maximum number of games to be included.
+        '''
+
+        recent_games = self.session.query(Game, Player.rating_change).\
+            join(Player, Game.game_guid == Player.game_guid).\
+            filter(Player.name_hash == name_hash).\
+            order_by(desc(Game.game_time)).\
+            limit(limit).\
+            all()
+        games = [(g.game_guid, g.version_code, g.map_name, g.matchup, g.duration, g.game_time, p) for g, p in recent_games]
+        current_time = datetime.now().isoformat()
+        return {'games': games, 'generated_at': current_time}
+
+    async def async_fetch_player_recent_games(self, name_hash: str, limit: int = 50) -> dict:
+        '''Async version of fetch_player_recent_games()'''
+
+        return self.fetch_player_recent_games(name_hash, limit)

@@ -85,6 +85,7 @@ class Player(Base):
     castle_time = Column(Integer)
     imperial_time = Column(Integer)
     resigned_time = Column(Integer)
+    rating_change = Column(Integer)
 
     game = relationship('Game', back_populates='players')
     files = relationship('File', back_populates='recorder',
