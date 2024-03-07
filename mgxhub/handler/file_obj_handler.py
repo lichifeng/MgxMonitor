@@ -16,7 +16,6 @@ class FileObjHandler(FileHandler):
     _tmpdir: str | None = None
     _auto_delete: bool = False
 
-
     def __init__(self,
                  file: io.StringIO | io.BytesIO | io.TextIOWrapper,
                  filename: str,
@@ -50,7 +49,7 @@ class FileObjHandler(FileHandler):
         self._tmpdir = tempfile.mkdtemp(
             prefix=cfg.get('system', 'tmpprefix'),
             dir=cfg.get('system', 'tmpdir')
-            )
+        )
         recfile = os.path.join(self._tmpdir, filename)
         with open(recfile, 'wb+') as f:
             shutil.copyfileobj(file, f)
@@ -61,7 +60,6 @@ class FileObjHandler(FileHandler):
 
         super().__init__(recfile, **handler_opts)
 
-
     def __del__(self):
-        if self._auto_delete and  self._tmpdir and os.path.isdir(self._tmpdir):
+        if self._auto_delete and self._tmpdir and os.path.isdir(self._tmpdir):
             shutil.rmtree(self._tmpdir)

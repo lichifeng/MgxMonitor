@@ -1,0 +1,1 @@
+from .wordpress import WPRestAPI, LOGGED_IN_CACHE

@@ -20,7 +20,6 @@ class RecordWatcher:
             self.thread = threading.Thread(target=self._watch, daemon=True)
             self.thread.start()
 
-
     def _watch(self):
         '''Watch the work directory for new files and process them'''
 

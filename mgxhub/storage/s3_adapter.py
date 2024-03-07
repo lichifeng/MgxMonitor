@@ -30,7 +30,6 @@ class S3Adapter:
     _virtual_host_style = False
     _client = None
 
-
     def __init__(
             self,
             endpoint: str = None,
@@ -55,13 +54,11 @@ class S3Adapter:
                              )
         self.set_bucket()
 
-
     @property
     def bucket(self) -> str:
         '''The bucket name to be used'''
 
         return self._bucket
-    
 
     def set_bucket(self) -> None:
         '''Set the bucket policy to public read'''
@@ -90,7 +87,6 @@ class S3Adapter:
         self._client.set_bucket_policy(
             self._bucket, json.dumps(_public_read_policy))
 
-
     def have(self, file_path: str) -> bool:
         '''Check if a file exists in the server.
 
@@ -106,7 +102,6 @@ class S3Adapter:
             return bool(result.etag)
         except Exception as e:
             return False
-
 
     def upload(self, source_file: str | IOBase, dest_file: str) -> ObjectWriteResult:
         '''Upload a file to the server.
@@ -130,7 +125,6 @@ class S3Adapter:
             return self._client.put_object(
                 self._bucket, dest_file, source_file, length=size
             )
-
 
     def remove_object(self, file_path: str) -> None:
         '''Remove a file from the server.

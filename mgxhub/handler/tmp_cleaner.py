@@ -9,6 +9,7 @@ from mgxhub.logger import logger
 TMPDIR_PREFIX = cfg.get('system', 'tmpprefix')
 TEMPDIR_DIR = cfg.get('system', 'tmpdir')
 
+
 class TmpCleaner:
     '''Used to handle dangling tmp directories and files created by mgxhub.'''
 
@@ -25,7 +26,6 @@ class TmpCleaner:
             if tmpdir.startswith(TMPDIR_PREFIX):
                 tmpdirs.append(tmpdir)
         return tmpdirs
-     
 
     @staticmethod
     def purge_all_tmpdirs() -> None:

@@ -35,8 +35,10 @@ if __name__ == "__main__":
     try:
         parser = argparse.ArgumentParser(description='Update ELO ratings.')
         parser.add_argument('--db_path', default=cfg.get('database', 'sqlite'), help='Path to SQLite database')
-        parser.add_argument('--duration_threshold', default=cfg.get('rating', 'durationthreshold'), help='Duration threshold for ELO rating update')
-        parser.add_argument('--batch_size', default=cfg.get('rating', 'batchsize'), help='Batch size for ELO rating update')
+        parser.add_argument('--duration_threshold', default=cfg.get('rating', 'durationthreshold'),
+                            help='Duration threshold for ELO rating update')
+        parser.add_argument('--batch_size', default=cfg.get('rating', 'batchsize'),
+                            help='Batch size for ELO rating update')
         args = parser.parse_args()
 
         engine = create_engine(f"sqlite:///{args.db_path}", echo=False)
@@ -45,7 +47,7 @@ if __name__ == "__main__":
         elo.update_ratings(
             duration_threshold=int(args.duration_threshold),
             batch_size=int(args.batch_size)
-            )
+        )
         session.close()
         engine.dispose()
     finally:

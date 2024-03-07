@@ -4,6 +4,7 @@ import os
 from mgxhub import Singleton
 from .default import DefaultConfig
 
+
 class Config(DefaultConfig, metaclass=Singleton):
     '''Configuration factory.
 
@@ -24,14 +25,13 @@ class Config(DefaultConfig, metaclass=Singleton):
     print(cfg.get('system', 'mapdir')) # /path/to/__workdir/map
     ```    
     '''
-    
+
     def __init__(self, cfg_path: str | None = None):
         # Load default configuration
         super().__init__()
 
         # Load user configuration
         self.load(cfg_path)
-
 
     def load(self, cfg_path: str | None = None):
         '''Load user configuration to override default.
@@ -54,5 +54,3 @@ class Config(DefaultConfig, metaclass=Singleton):
             cfg_path = os.path.join(self.project_root(), cfg_path)
             if os.path.exists(cfg_path):
                 self.config.read(cfg_path)
-
-        

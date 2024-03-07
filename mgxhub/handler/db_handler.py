@@ -36,7 +36,6 @@ class DBHandler:
             self._db_path = db_path
         self._load_db(self._db_path)
 
-
     def _load_db(self, db_path: str) -> None:
         '''Load the database.
 
@@ -48,8 +47,7 @@ class DBHandler:
         self._db_engine = create_engine(f"sqlite:///{db_path}", echo=False)
         Base.metadata.create_all(self._db_engine)
         self._db_session = Session(self._db_engine)
-        logger.debug(f"Database loaded: {db_path}") # Watcher thread will print this, too.
-
+        logger.debug(f"Database loaded: {db_path}")  # Watcher thread will print this, too.
 
     def __del__(self):
         if self._db_session:
@@ -62,7 +60,6 @@ class DBHandler:
         '''Get the database session.'''
 
         return self._db_session
-
 
     def get_game(self, game_guid: str, lang: str = 'en') -> GameDetail | None:
         '''Get details for a game by its GUID.
@@ -200,7 +197,8 @@ class DBHandler:
                     'chat_time': c.get('time'),
                     'chat_content': c.get('msg')
                 }
-                stmt = insert(Chat).values(chat).on_conflict_do_nothing(index_elements=['game_guid', 'chat_time', 'chat_content'])
+                stmt = insert(Chat).values(chat).on_conflict_do_nothing(
+                    index_elements=['game_guid', 'chat_time', 'chat_content'])
                 self.session.execute(stmt)
 
         self.session.commit()
@@ -208,7 +206,6 @@ class DBHandler:
         if game:
             return "updated", merged_game.game_guid
         return "success", merged_game.game_guid
-
 
     def set_visibility(self, game_guid: str, level: int = 0) -> bool:
         '''Set visibility level of a game.
@@ -225,7 +222,6 @@ class DBHandler:
             self.session.commit()
             return True
         return False
-
 
     def delete_game(self, game_guid: str) -> bool:
         '''Delete a game by its GUID.
@@ -250,7 +246,6 @@ class DBHandler:
             return True
         return False
 
-
     def fetch_index_stats(self) -> dict:
         '''Unique games/players count, new games this month.'''
 
@@ -270,7 +265,6 @@ class DBHandler:
         stats['generated_at'] = datetime.now().isoformat()
 
         return stats
-
 
     def fetch_rand_players(self, threshold: int = 10, limit: int = 300) -> dict:
         '''Random players.
@@ -299,10 +293,10 @@ class DBHandler:
         """)
 
         result = self.session.execute(query, {'threshold': threshold, 'limit': limit})
-        players = [{'name': row.name, 'name_hash': md5(str(row.name).encode('utf-8')).hexdigest(), 'game_count': row.game_count} for row in result]
+        players = [{'name': row.name, 'name_hash': md5(str(row.name).encode(
+            'utf-8')).hexdigest(), 'game_count': row.game_count} for row in result]
         current_time = datetime.now().isoformat()
         return {'players': players, 'generated_at': current_time}
-
 
     def fetch_latest_players(self, limit: int = 300) -> dict:
         '''Newly found players.
@@ -337,7 +331,6 @@ class DBHandler:
         players = [list(row) for row in result.fetchall()]
         current_time = datetime.now().isoformat()
         return {'players': players, 'generated_at': current_time}
-
 
     def fetch_close_friends(self, name_hash: str, limit: int = 100) -> list:
         '''Players who played with the given player most.
@@ -374,7 +367,6 @@ class DBHandler:
 
         return self.fetch_close_friends(name_hash, limit)
 
-
     def fetch_latest_games(self, limit: int = 20) -> dict:
         '''Get recently uploaded games.
 
@@ -403,7 +395,6 @@ class DBHandler:
         current_time = datetime.now().isoformat()
         return {'games': games, 'generated_at': current_time}
 
-
     def fetch_rand_games(self, threshold: int = 10, limit: int = 50) -> dict:
         '''Get random games.
 
@@ -426,7 +417,6 @@ class DBHandler:
         current_time = datetime.now().isoformat()
         return {'games': games, 'generated_at': current_time}
 
-
     def fetch_rating_meta(self) -> dict:
         '''Get rating meta data.'''
 
@@ -447,14 +437,13 @@ class DBHandler:
 
         return self.fetch_rating_meta()
 
-
     def fetch_rating(
-                    self, 
-                    version_code: str = 'AOC10', 
-                    matchup: str = '1v1', 
-                    order: str = 'desc',
-                    page: int = 0,
-                    page_size: int = 100,
+        self,
+        version_code: str = 'AOC10',
+        matchup: str = '1v1',
+        order: str = 'desc',
+        page: int = 0,
+        page_size: int = 100,
     ) -> dict:
         '''Get ratings information.
 
@@ -483,7 +472,7 @@ class DBHandler:
                 first_played,
                 last_played
             FROM ratings
-            WHERE version_code = :version_code AND matchup = :matchup_value 
+            WHERE version_code = :version_code AND matchup = :matchup_value
             ORDER BY rating {order_method}
             LIMIT :page_size
             OFFSET :page;
@@ -492,9 +481,9 @@ class DBHandler:
         ratings = self.session.execute(
             sql,
             {
-                "version_code": version_code, 
-                "matchup_value": matchup_value, 
-                "page_size": page_size, 
+                "version_code": version_code,
+                "matchup_value": matchup_value,
+                "page_size": page_size,
                 "page": page * page_size
             }
         ).fetchall()
@@ -502,14 +491,13 @@ class DBHandler:
         current_time = datetime.now().isoformat()
         return {'ratings': ratings, 'generated_at': current_time}
 
-    
     def fetch_player_rating(
-                    self, 
-                    name_hash: str,
-                    version_code: str = 'AOC10', 
-                    matchup: str = '1v1', 
-                    order: str = 'desc',
-                    page_size: int = 100,
+        self,
+        name_hash: str,
+        version_code: str = 'AOC10',
+        matchup: str = '1v1',
+        order: str = 'desc',
+        page_size: int = 100,
     ) -> dict:
         '''Get ratings information of a player.
 
@@ -547,23 +535,22 @@ class DBHandler:
             )
             SELECT * FROM rating_table
             WHERE rownum > (SELECT rownum FROM name_hash_index) / :page_size * :page_size AND rownum <= ((SELECT rownum FROM name_hash_index) / :page_size + 1) * :page_size
-            ORDER BY rownum 
+            ORDER BY rownum
             LIMIT :page_size;
         """)
 
         ratings = self.session.execute(
             sql,
             {
-                "version_code": version_code, 
-                "matchup_value": matchup_value, 
-                "page_size": page_size, 
+                "version_code": version_code,
+                "matchup_value": matchup_value,
+                "page_size": page_size,
                 "name_hash": name_hash.lower() if name_hash else None
             }
         ).fetchall()
         ratings = [list(row) for row in ratings]
         current_time = datetime.now().isoformat()
         return {'ratings': ratings, 'generated_at': current_time}
-
 
     def fetch_player_totals(self, name_hash: str) -> dict:
         '''Get profile of a player.
@@ -580,12 +567,11 @@ class DBHandler:
             .join(Player, Game.game_guid == Player.game_guid).filter(Player.name_hash == name_hash, Game.matchup == '1v1').scalar()
 
         return {"total_games": total_games, "total_wins": total_wins, "total_1v1_games": total_1v1}
-    
+
     async def async_fetch_player_totals(self, name_hash: str) -> dict:
         '''Async version of fetch_player_totals()'''
 
         return self.fetch_player_totals(name_hash)
-
 
     def fetch_player_rating_stats(self, name_hash: str) -> dict:
         '''Get rating stats of a player.
@@ -611,12 +597,11 @@ class DBHandler:
         stats = [tuple(row) for row in result.fetchall()]
         current_time = datetime.now().isoformat()
         return {'stats': stats, 'generated_at': current_time}
-    
+
     async def async_fetch_player_rating_stats(self, name_hash: str) -> dict:
         '''Async version of fetch_player_rating_stats()'''
 
         return self.fetch_player_rating_stats(name_hash)
-
 
     def fetch_player_recent_games(self, name_hash: str, limit: int = 50) -> dict:
         '''Get recent games of a player.
@@ -632,7 +617,8 @@ class DBHandler:
             order_by(desc(Game.game_time)).\
             limit(limit).\
             all()
-        games = [(g.game_guid, g.version_code, g.map_name, g.matchup, g.duration, g.game_time, p) for g, p in recent_games]
+        games = [(g.game_guid, g.version_code, g.map_name, g.matchup, g.duration, g.game_time, p)
+                 for g, p in recent_games]
         current_time = datetime.now().isoformat()
         return {'games': games, 'generated_at': current_time}
 

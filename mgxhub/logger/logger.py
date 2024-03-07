@@ -20,6 +20,7 @@ class JsonFormatter(logging.Formatter):
         }
         return json.dumps(log_message)
 
+
 class Logger():
     '''Logger.
 
@@ -57,10 +58,9 @@ class Logger():
         self._logger.addHandler(handler)
         self._logger.info(f'Logger initialized with level: {loglevel}, handler: {handler.__class__.__name__}')
 
-
     def get(self) -> logging.Logger:
         '''Get logger instance.
-        
+
         Only one instance of logger is created across the application.
         '''
 

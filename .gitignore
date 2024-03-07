@@ -213,6 +213,5 @@ pyrightconfig.json
 *.sqlite3.zip
 translations/po/
 MgxParser_D_EXE
-__tmp/
 __workdir/
 testconf.ini

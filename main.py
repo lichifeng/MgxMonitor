@@ -13,11 +13,17 @@ from mgxhub.handler import DBHandler, FileObjHandler, TmpCleaner
 from mgxhub.rating import RatingLock
 from mgxhub.watcher import RecordWatcher
 from mgxhub.config import cfg, Config, DefaultConfig
+from mgxhub.auth import WPRestAPI, LOGGED_IN_CACHE
 
 Config().load('testconf.ini')
 app = FastAPI()
 db = DBHandler()
 watcher = RecordWatcher()
+
+MAP_DIR = cfg.get('system', 'mapdir')
+if MAP_DIR:
+    app.mount("/maps", StaticFiles(directory=MAP_DIR), name="maps")
+
 
 @app.get("/")
 async def ping():
@@ -30,6 +36,8 @@ async def ping():
 async def download_default_config() -> str:
     '''Download default configuration file'''
 
+    WPRestAPI().need_admin_login()
+
     default_conf = DefaultConfig()
     string_io = io.StringIO()
     default_conf.config.write(string_io)
@@ -39,6 +47,8 @@ async def download_default_config() -> str:
 @app.get("/system/config/current", response_class=PlainTextResponse)
 async def download_current_config() -> str:
     '''Download current configuration file'''
+
+    WPRestAPI().need_admin_login()
 
     string_io = io.StringIO()
     cfg.write(string_io)
@@ -73,10 +83,12 @@ async def get_rating_status() -> dict:
 
 @app.get("/system/rating/start")
 async def start_rating_calc(
-    batch_size: str = cfg.get('rating', 'batchsize'), 
+    batch_size: str = cfg.get('rating', 'batchsize'),
     duration_threshold: str = cfg.get('rating', 'durationthreshold')
 ) -> dict:
     '''Start the rating calculation process.'''
+
+    WPRestAPI().need_admin_login()
 
     lock = RatingLock()
     if lock.rating_running():
@@ -90,6 +102,8 @@ async def start_rating_calc(
 async def unlock_rating(force: bool = False) -> dict:
     '''Unlock rating lock or stop rating calculation by force.'''
 
+    WPRestAPI().need_admin_login()
+
     lock = RatingLock()
     lock.unlock(force)
     if lock.lock_file_exists():
@@ -102,6 +116,8 @@ async def unlock_rating(force: bool = False) -> dict:
 async def list_tmpdirs() -> list:
     '''List all temporary directories created by mgxhub'''
 
+    WPRestAPI().need_admin_login()
+
     cleaner = TmpCleaner()
     return cleaner.list_all_tmpdirs()
 
@@ -110,30 +126,51 @@ async def list_tmpdirs() -> list:
 async def purge_tmpdirs() -> dict:
     '''Purge all temporary directories created by mgxhub'''
 
+    WPRestAPI().need_admin_login()
+    
     cleaner = TmpCleaner()
     cleaner.purge_all_tmpdirs()
 
     raise HTTPException(status_code=202, detail="Purge command sent")
 
 
-@app.get("/game/{game_guid}")
-async def get_game(game_guid: str, lang: str = 'en') -> GameDetail | None:
+@app.get("/game/detail")
+async def get_game(guid: str, lang: str = 'en') -> GameDetail | None:
     '''Get details for a game by its GUID.
 
-    - **game_guid**: GUID of the game.
+    - **guid**: GUID of the game.
     - **lang**: Language code. Default is 'en'.
     '''
 
-    details = db.get_game(game_guid, lang)
+    details = db.get_game(guid, lang)
 
     if details:
         return details
 
-    raise HTTPException(
-        status_code=404, detail=f"Game profile [{game_guid}] not found")
+    raise HTTPException(status_code=404, detail=f"Game profile [{guid}] not found")
 
 
-@app.post("/upload")
+@app.get("/game/random")
+async def get_rand_games(threshold: int = 10, limit: int = 50) -> dict:
+    '''Fetch random games'''
+
+    return db.fetch_rand_games(threshold, limit)
+
+
+@app.get("/game/latest")
+async def get_latest_games(limit: int = 100) -> dict:
+    '''Fetch recently uploaded games
+
+    - **limit**: The number of games to fetch. Default is 100.
+
+    Returned data format:
+        [game_guid, version_code, created_time, map_name, matchup, speed, duration, uploader]
+    '''
+
+    return db.fetch_latest_games(limit)
+
+
+@app.post("/game/upload")
 async def upload_a_record(
     recfile: Annotated[UploadFile, File()],
     lastmod: Annotated[str, Form()],
@@ -157,88 +194,35 @@ async def upload_a_record(
     return uploaded.process()
 
 
-@app.get("/fetch/indexstats")
+@app.get("/stats/total")
 async def get_index_stats() -> dict:
     '''Get index stats'''
 
     return db.fetch_index_stats()
 
 
-@app.get("/fetch/randplayers")
+@app.get("/player/random")
 async def get_rand_players(threshold: int = 10, limit: int = 300) -> dict:
     '''Fetch random players and their game counts'''
 
     return db.fetch_rand_players(threshold, limit)
 
 
-@app.get("/fetch/randgames")
-async def get_rand_games(threshold: int = 10, limit: int = 50) -> dict:
-    '''Fetch random games'''
-
-    return db.fetch_rand_games(threshold, limit)
-
-
-@app.get("/fetch/latestplayers")
+@app.get("/player/latest")
 async def get_latest_players(limit: int = 20) -> dict:
     '''Fetch latest 20 players and their game counts'''
 
     return db.fetch_latest_players(limit)
 
 
-@app.get("/fetch/closefriends")
+@app.get("/player/friends")
 async def get_close_friends(player_hash: str, limit: int = 100) -> dict:
     '''Fetch close friends of a player'''
 
     return db.fetch_close_friends(player_hash.lower(), limit)
 
 
-@app.get("/fetch/latestgames")
-async def get_latest_games(limit: int = 100) -> dict:
-    '''Fetch recently uploaded games
-    
-    - **limit**: The number of games to fetch. Default is 100.
-
-    Returned data format:
-        [game_guid, version_code, created_time, map_name, matchup, speed, duration, uploader]
-    '''
-
-    return db.fetch_latest_games(limit)
-
-
-@app.get("/fetch/ratingmeta")
-async def get_rating_meta() -> dict:
-    '''Fetch rating metadata'''
-
-    return db.fetch_rating_meta()
-
-
-@app.get("/fetch/rating")
-async def get_rating_table(
-    version_code: str = 'AOC10', 
-    matchup: str = 'team', 
-    order: str = 'desc',
-    page: int = 0,
-    page_size: int = 100
-) -> dict:
-    '''Fetch rating ladder'''
-
-    return db.fetch_rating(version_code, matchup, order, page, page_size)
-
-
-@app.get("/fetch/rating/player")
-async def get_player_rating(
-    player_hash: str,
-    version_code: str = 'AOC10', 
-    matchup: str = 'team', 
-    order: str = 'desc',
-    page_size: int = 100
-) -> dict:
-    '''Fetch rating of a player'''
-
-    return db.fetch_player_rating(player_hash, version_code, matchup, order, page_size)
-
-
-@app.get("/fetch/player/comprehensive")
+@app.get("/player/profile")
 async def get_player_comprehensive(player_hash: str) -> dict:
     '''Fetch comprehensive information of a player'''
 
@@ -257,6 +241,51 @@ async def get_player_comprehensive(player_hash: str) -> dict:
     }
 
 
-MAP_DIR = cfg.get('system', 'mapdir')
-if MAP_DIR:
-    app.mount("/maps", StaticFiles(directory=MAP_DIR), name="maps")
+@app.get("/rating/stats")
+async def get_rating_meta() -> dict:
+    '''Fetch rating metadata'''
+
+    return db.fetch_rating_meta()
+
+
+@app.get("/rating/table")
+async def get_rating_table(
+    version_code: str = 'AOC10',
+    matchup: str = 'team',
+    order: str = 'desc',
+    page: int = 0,
+    page_size: int = 100
+) -> dict:
+    '''Fetch rating ladder'''
+
+    return db.fetch_rating(version_code, matchup, order, page, page_size)
+
+
+@app.get("/rating/player")
+async def get_player_rating(
+    player_hash: str,
+    version_code: str = 'AOC10',
+    matchup: str = 'team',
+    order: str = 'desc',
+    page_size: int = 100
+) -> dict:
+    '''Fetch rating of a player'''
+
+    return db.fetch_player_rating(player_hash, version_code, matchup, order, page_size)
+
+
+@app.get("/auth/onlineusers")
+async def list_online_users() -> dict:
+    '''Check if a user is logged in'''
+
+    WPRestAPI().need_admin_login()
+    return LOGGED_IN_CACHE
+
+
+@app.get("/auth/logoutall")
+async def logout_all_users() -> dict:
+    '''Logout all users'''
+
+    WPRestAPI().need_admin_login()
+    LOGGED_IN_CACHE.clear()
+    return {"status": "All users logged out"}

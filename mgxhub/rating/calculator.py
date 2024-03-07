@@ -30,7 +30,6 @@ class EloCalculator:
         self._K = K
         self._session = session
 
-
     def _calc_rating_delta(self, rating_winner: Number, rating_loser: Number):
         '''Calculate the new Elo rating delta for the winner and loser.
 
@@ -40,16 +39,14 @@ class EloCalculator:
         '''
 
         prob_winner = self._calc_probability(rating_winner, rating_loser)
-        prob_loser = self._calc_probability(rating_loser, rating_winner) # pylint: disable=W1114
+        prob_loser = self._calc_probability(rating_loser, rating_winner)  # pylint: disable=W1114
 
         return round(self._K * (1 - prob_loser)), round(self._K * (0 - prob_winner))
-
 
     def _calc_probability(self, rating_winner: Number, rating_loser: Number):
         '''Calculate the Probability of Winning.'''
 
         return 1.0 * 1.0 / (1 + 1.0 * math.pow(10, 1.0 * (rating_winner - rating_loser) / 400))
-
 
     def _fetch_in_batches(self, query: Query, batch_size: int | None = None):
         '''Fetch the query results in batches.'''
@@ -67,7 +64,6 @@ class EloCalculator:
                 for row in batch:
                     yield row
                 offset += batch_size
-
 
     def _update_game_ratings(self, col: dict):
         # Start calculating the ratings for the previous game
@@ -104,7 +100,6 @@ class EloCalculator:
                 p["streak"] = 0
                 self._change_buffer.append({"id": p["player_id"], "rating_change": delta_loser})
 
-
     def _generate_rating_cache(self, duration_threshold: int = 15 * 60 * 1000, batch_size: int | None = None) -> None:
         '''Generate the ratings cache.'''
 
@@ -115,7 +110,7 @@ class EloCalculator:
             Player.name_hash,
             Player.name,
             Player.is_winner,
-            Game.game_time, 
+            Game.game_time,
             Player.id
         ).join(
             Game, Player.game_guid == Game.game_guid
@@ -185,7 +180,6 @@ class EloCalculator:
         self._winners_cache.clear()
         self._losers_cache.clear()
 
-
     def update_ratings(self, duration_threshold: int = 15 * 60 * 1000, batch_size: int | None = None):
         '''Update the ratings table.'''
 
@@ -232,12 +226,10 @@ class EloCalculator:
         self._session.commit()
         logger.info("Ratings table updated")
 
-
     def set_K(self, K: int):
         '''Set the maximum possible adjustment.'''
 
         self._K = K
-
 
     @property
     def ratings(self):

@@ -54,7 +54,6 @@ class FileHandler:
 
     _db_handler = None
 
-
     def __init__(
             self,
             file_path: str,
@@ -71,13 +70,12 @@ class FileHandler:
         self._db_handler = db_handler
 
         self._map_dir = cfg.get('system', 'mapdir')
-        
+
         try:
             self._s3_conn = S3Adapter(**cfg.s3)
         except Exception as e:
             logger.debug(f's3 error: {e}')
         self._s3_replace = s3_replace
-
 
     def _clean_file(self, file_path: str | None = None) -> None:
         '''Delete the file if it exists and delete_after is set to True.'''
@@ -112,13 +110,11 @@ class FileHandler:
             shutil.rmtree(tmpdir_from_child)
             return
 
-
     def _set_current_file(self, file_path: str) -> None:
         '''Set the current file and its extension.'''
 
         self._current_file = file_path
         self._current_extension = file_path.split('.')[-1].lower()
-
 
     def process(self, file_path: str | None = None) -> dict:
         '''Start processing the file and return the result.
@@ -156,7 +152,7 @@ class FileHandler:
     #
     # def _slow_tasks(self, tasks):
     #     '''Run the slow tasks asynchronously.
-        
+
     #     _slow_tasks 函数会使用 asyncio 的事件循环来并发地运行多个任务。这些任务
     #     会在同一个线程中并发运行，而不是在新的线程中运行。这是因为 asyncio 是基
     #     于单线程的协程模型，它使用事件循环来调度任务，而不是创建新的线
@@ -166,7 +162,7 @@ class FileHandler:
     #     中并发地运行多个任务，并且会阻塞调用它的线程，直到所有的任务都完成。这
     #     样，你可以在 _slow_tasks 函数返回后，确保所有的任务都已经完成。
     #     '''
-        
+
     #     loop_found = False
     #     try:
     #         loop = asyncio.get_running_loop()
@@ -174,7 +170,7 @@ class FileHandler:
     #     except RuntimeError:
     #         loop = asyncio.new_event_loop()
     #         asyncio.set_event_loop(loop)
-            
+
     #     try:
     #         loop.run_until_complete(asyncio.gather(*tasks))
     #     except Exception as e:
@@ -183,7 +179,6 @@ class FileHandler:
     #         if not loop_found:
     #             loop.close()
 
-
     def _slow_tasks(self, tasks):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -191,7 +186,6 @@ class FileHandler:
             loop.run_until_complete(asyncio.gather(*tasks))
         finally:
             loop.close()
-            
 
     def _process_record(self, record_path: str, async_run: bool = False, opts: str = '') -> dict:
         '''Process the record file and return the result.
@@ -235,7 +229,7 @@ class FileHandler:
 
         # Me:
         # 为什么我在对这个类单独测试时没有找到消息循环，但是通过fastapi调用的时候能找到？
-        
+
         # Copilot:
         # 这是因为FastAPI在内部使用了Starlette，Starlette在启动时会创建一个事件循
         # 环，并在整个应用的生命周期中运行这个事件循环。当你通过FastAPI调用你的代
@@ -256,7 +250,7 @@ class FileHandler:
         #     threading.Thread(target=self._slow_tasks, args=(tasks,)).start()
         # else:
         #     self._slow_tasks(tasks)
-            
+
         slow_tasks_thd = threading.Thread(target=self._slow_tasks, args=(tasks,))
         slow_tasks_thd.start()
         if not async_run:
@@ -264,10 +258,9 @@ class FileHandler:
 
         ############### Asyncable Procedures End ###################
         ############################################################
-        
+
         self._valid_count += 1
         return parsed_result
-
 
     def _process_directory(self, dir_path: str) -> None:
         '''Process the directory and its files recursively.
@@ -284,7 +277,6 @@ class FileHandler:
                 inner_path = os.path.join(root, inner_dir)
                 self._process_directory(inner_path)
                 self._clean_file(inner_path)
-
 
     def _process_compressed(self, zip_path: str) -> dict:
         '''Extract the compressed file and process the files inside.
@@ -310,7 +302,6 @@ class FileHandler:
 
         return {'status': 'success', 'message': 'compressed file was scaduled for processing'}
 
-
     async def _save_to_db(self, data: dict, db: DBHandler) -> tuple[str, str]:
         '''Save the parsed data to the database.
 
@@ -331,7 +322,6 @@ class FileHandler:
                 result = 'error', str(e)
 
         return result
-
 
     async def _save_to_s3(
         self,
@@ -402,7 +392,6 @@ Packed at {current_time}
                 self._move_to_error(record_path)
                 return 'OSS_UPLOAD_ERROR'
 
-
     async def _save_map(self, basename: str, base64_str: str) -> str:
         '''Save the map image to the directory.
 
@@ -425,7 +414,6 @@ Packed at {current_time}
         except Exception as e:
             logger.error(f'_save_map error: {e}, basename(guid): {basename}, current file: {self._current_file}')
             return 'MAP_SAVE_ERROR'
-
 
     def _move_to_error(self, file_path: str) -> str:
         '''Move the file to the error directory.
