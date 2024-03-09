@@ -56,7 +56,7 @@ class Logger():
         formatter = JsonFormatter()
         handler.setFormatter(formatter)
         self._logger.addHandler(handler)
-        self._logger.info(f'Logger initialized with level: {loglevel}, handler: {handler.__class__.__name__}')
+        self._logger.debug(f'Logger initialized with level: {loglevel}, handler: {handler.__class__.__name__}')
 
     def get(self) -> logging.Logger:
         '''Get logger instance.

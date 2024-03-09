@@ -32,6 +32,7 @@ class Config(DefaultConfig, metaclass=Singleton):
 
         # Load user configuration
         self.load(cfg_path)
+        os.makedirs(self.config.get('system', 'mapdir'), exist_ok=True)
 
     def load(self, cfg_path: str | None = None):
         '''Load user configuration to override default.
@@ -47,10 +48,9 @@ class Config(DefaultConfig, metaclass=Singleton):
         '''
 
         if not cfg_path:
-            cfg_path = os.getenv('MGXHUB_CONFIG')
-            if cfg_path and os.path.exists(cfg_path):
-                self.config.read(cfg_path)
-        else:
-            cfg_path = os.path.join(self.project_root(), cfg_path)
-            if os.path.exists(cfg_path):
-                self.config.read(cfg_path)
+            cfg_path = os.getenv('MGXHUB_CONFIG', '')
+            # print(f'Configuration file is not specified, using environment variable MGXHUB_CONFIG: {cfg_path}')
+            
+        cfg_path = os.path.join(self.project_root(), cfg_path)
+        if os.path.exists(cfg_path) and os.path.isfile(cfg_path):
+            self.config.read(cfg_path)

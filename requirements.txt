@@ -4,3 +4,4 @@ sqlalchemy
 fastapi[all]
 uvicorn[standard]
 minio
+requests

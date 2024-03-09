@@ -18,6 +18,7 @@ from mgxhub.parser import parse
 from mgxhub.storage import S3Adapter
 from mgxhub.config import cfg
 from mgxhub.logger import logger
+from mgxhub.rating import RatingLock
 from .db_handler import DBHandler
 
 
@@ -317,6 +318,8 @@ class FileHandler:
             try:
                 result = db.add_game(data)
                 logger.info(f'[DB] Add: {result}')
+                if result[0] in ['success', 'updated']:
+                    RatingLock().start_calc(schedule=True)
             except Exception as e:
                 logger.error(f'_save_to_db error: {e}')
                 result = 'error', str(e)

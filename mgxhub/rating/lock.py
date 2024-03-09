@@ -82,12 +82,14 @@ class RatingLock:
     def start_calc(
             self,
             batch_size: str = cfg.get('rating', 'batchsize'),
-            duration_threshold: str = cfg.get('rating', 'durationthreshold')
-    ):
+            duration_threshold: str = cfg.get('rating', 'durationthreshold'),
+            schedule: bool = False
+    ) -> None:
         """Start the rating calculation process."""
 
         if self.rating_running():
-            pass
+            if schedule:
+                self.schedule()
         else:
             # Get the path of the current Python interpreter
             current_interpreter = sys.executable
@@ -101,7 +103,15 @@ class RatingLock:
                               '--duration_threshold', duration_threshold
                               ])
 
-    def unlock(self, force=False):
+    def schedule(self) -> None:
+        """Create a scheduled signal for the rating calculation process."""
+
+        scheduled_file = self._lock_file + ".scheduled"
+        if not os.path.exists(scheduled_file):
+            with open(scheduled_file, 'x', encoding="ASCII"):
+                pass
+
+    def unlock(self, force=False) -> None:
         """Remove the lock file. 
         If force, the process will be terminated before removing the lock file.
         """
@@ -115,7 +125,7 @@ class RatingLock:
             except FileNotFoundError:
                 pass
 
-    def terminate_process(self):
+    def terminate_process(self) -> None:
         """Terminate the process with the PID in the lock file.
 
         `os.waitpid` 函数用于等待子进程结束，并返回子进程的退出状态。

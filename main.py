@@ -4,7 +4,6 @@ import os
 import io
 import asyncio
 from datetime import datetime
-from typing import Annotated
 from fastapi import FastAPI, HTTPException, Form, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import PlainTextResponse
@@ -12,10 +11,9 @@ from mgxhub.model.webapi import GameDetail
 from mgxhub.handler import DBHandler, FileObjHandler, TmpCleaner
 from mgxhub.rating import RatingLock
 from mgxhub.watcher import RecordWatcher
-from mgxhub.config import cfg, Config, DefaultConfig
+from mgxhub.config import cfg, DefaultConfig
 from mgxhub.auth import WPRestAPI, LOGGED_IN_CACHE
 
-Config().load('testconf.ini')
 app = FastAPI()
 db = DBHandler()
 watcher = RecordWatcher()
@@ -84,7 +82,8 @@ async def get_rating_status() -> dict:
 @app.get("/system/rating/start")
 async def start_rating_calc(
     batch_size: str = cfg.get('rating', 'batchsize'),
-    duration_threshold: str = cfg.get('rating', 'durationthreshold')
+    duration_threshold: str = cfg.get('rating', 'durationthreshold'),
+    shcedule: bool = False
 ) -> dict:
     '''Start the rating calculation process.'''
 
@@ -92,9 +91,13 @@ async def start_rating_calc(
 
     lock = RatingLock()
     if lock.rating_running():
+        if shcedule:
+            lock.schedule()
+            raise HTTPException(
+                status_code=202, detail="Rating calculation process is already running, scheduled the next calculation")
         raise HTTPException(status_code=409, detail="Rating calculation process is already running")
 
-    lock.start_calc(batch_size=batch_size, duration_threshold=duration_threshold)
+    lock.start_calc(batch_size=batch_size, duration_threshold=duration_threshold, schedule=shcedule)
     raise HTTPException(status_code=202, detail="Rating calculation process started")
 
 
@@ -127,7 +130,7 @@ async def purge_tmpdirs() -> dict:
     '''Purge all temporary directories created by mgxhub'''
 
     WPRestAPI().need_admin_login()
-    
+
     cleaner = TmpCleaner()
     cleaner.purge_all_tmpdirs()
 
@@ -172,8 +175,9 @@ async def get_latest_games(limit: int = 100) -> dict:
 
 @app.post("/game/upload")
 async def upload_a_record(
-    recfile: Annotated[UploadFile, File()],
-    lastmod: Annotated[str, Form()],
+    recfile: UploadFile = File(...),
+    lastmod: str = Form(...),
+    force_replace: bool = Form(False)
 ):
     '''Upload a record file to the server.
 
@@ -181,10 +185,13 @@ async def upload_a_record(
     - **lastmod**: The last modified time of the record file.
     '''
 
+    if force_replace and not WPRestAPI().need_admin_login(brutal_term=False):
+        force_replace = False
+
     uploaded = FileObjHandler(
         recfile.file, recfile.filename, lastmod,
         {
-            "s3_replace": True,
+            "s3_replace": force_replace,
             "delete_after": True,
             "db_handler": db
         }

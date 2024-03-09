@@ -27,7 +27,7 @@ class DBHandler:
         '''Initialize the database handler.
 
         Args:
-            db_path: Path to the database file. 
+            db_path: Path to the database file. If an relative path is given, it will be joined with the project root.
         '''
 
         if db_path is None:

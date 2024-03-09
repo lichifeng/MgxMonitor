@@ -23,7 +23,7 @@ COPY . .
 COPY --from=builder /root/MgxParser/build/Release/MgxParser_D_EXE /mgxhub/mgxhub/parser/
 COPY --from=builder /root/MgxParser/build/Release/libMgxParser_SHARED.so /mgxhub/mgxhub/parser/
 
-RUN apk update && apk add --no-cache libpng openssl libstdc++ libgcc
+RUN apk update && apk add --no-cache libpng openssl libstdc++ libgcc p7zip
 
 RUN pip install --no-cache-dir -r requirements.txt
 
