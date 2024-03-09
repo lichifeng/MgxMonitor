@@ -58,8 +58,6 @@ class DefaultConfig:
         # WordPress configuration
         self.config['wordpress'] = {
             'url': '',
-            'username': '',
-            'password': '',
             'login_expire': '15'  # minutes
         }
 

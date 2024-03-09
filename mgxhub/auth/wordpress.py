@@ -22,18 +22,17 @@ class WPRestAPI:
     _api_url = None
     _creds_set = True
 
-    def __init__(self, wp_cred: list | None = None):
+    def __init__(self, username: str, password: str, wp_url: str | None = None):
         '''Initialize WordPress REST API client.'''
 
-        if not wp_cred:
-            self._username = cfg.get('wordpress', 'username')
-            self._password = cfg.get('wordpress', 'password')
+        if not wp_url:
             self._url = cfg.get('wordpress', 'url')
         else:
-            self._username = wp_cred[0]
-            self._password = wp_cred[1]
-            self._url = wp_cred[2]
+            self._url = wp_url
 
+        self._username = username
+        self._password = password
+        
         if not self._url or not self._username or not self._password:
             logger.warning('WordPress credentials are not set')
             self._creds_set = False

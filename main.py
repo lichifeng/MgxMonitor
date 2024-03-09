@@ -4,9 +4,10 @@ import os
 import io
 import asyncio
 from datetime import datetime
-from fastapi import FastAPI, Form, UploadFile, File, BackgroundTasks
+from fastapi import FastAPI, Form, UploadFile, File, BackgroundTasks, Depends, APIRouter
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from mgxhub.model.webapi import GameDetail
 from mgxhub.handler import DBHandler, FileObjHandler, TmpCleaner
 from mgxhub.rating import RatingLock
@@ -15,10 +16,14 @@ from mgxhub.config import cfg, DefaultConfig
 from mgxhub.auth import WPRestAPI, LOGGED_IN_CACHE
 from mgxhub.storage import S3Adapter
 from mgxhub.util.sqlite3 import sqlite3backup
+from mgxhub.auth.authrouter import need_admin_login, security
 
 app = FastAPI()
+admin_auth_router = APIRouter(dependencies=[Depends(need_admin_login)])
+
 db = DBHandler()
 watcher = RecordWatcher()
+security = HTTPBasic()
 
 MAP_DIR = cfg.get('system', 'mapdir')
 if MAP_DIR:
@@ -32,11 +37,9 @@ async def ping():
     return {"time": f"{datetime.now()}", "status": "online"}
 
 
-@app.get("/system/config/default", response_class=PlainTextResponse)
+@admin_auth_router.get("/system/config/default", response_class=PlainTextResponse)
 async def download_default_config() -> str:
     '''Download default configuration file'''
-
-    WPRestAPI().need_admin_login()
 
     default_conf = DefaultConfig()
     string_io = io.StringIO()
@@ -44,11 +47,9 @@ async def download_default_config() -> str:
     return string_io.getvalue()
 
 
-@app.get("/system/config/current", response_class=PlainTextResponse)
+@admin_auth_router.get("/system/config/current", response_class=PlainTextResponse)
 async def download_current_config() -> str:
     '''Download current configuration file'''
-
-    WPRestAPI().need_admin_login()
 
     string_io = io.StringIO()
     cfg.write(string_io)
@@ -81,15 +82,13 @@ async def get_rating_status() -> dict:
     }
 
 
-@app.get("/system/rating/start")
+@admin_auth_router.get("/system/rating/start")
 async def start_rating_calc(
     batch_size: str = cfg.get('rating', 'batchsize'),
     duration_threshold: str = cfg.get('rating', 'durationthreshold'),
     shcedule: bool = False
 ) -> dict:
     '''Start the rating calculation process.'''
-
-    WPRestAPI().need_admin_login()
 
     lock = RatingLock()
     if lock.rating_running():
@@ -102,11 +101,9 @@ async def start_rating_calc(
     return JSONResponse(status_code=202, content="Rating calculation process started")
 
 
-@app.get("/system/rating/unlock")
+@admin_auth_router.get("/system/rating/unlock")
 async def unlock_rating(force: bool = False) -> dict:
     '''Unlock rating lock or stop rating calculation by force.'''
-
-    WPRestAPI().need_admin_login()
 
     lock = RatingLock()
     lock.unlock(force)
@@ -116,37 +113,33 @@ async def unlock_rating(force: bool = False) -> dict:
     return JSONResponse(status_code=202, content="Unlocked")
 
 
-@app.get("/system/tmpdir/list")
+@admin_auth_router.get("/system/tmpdir/list")
 async def list_tmpdirs() -> list:
     '''List all temporary directories created by mgxhub'''
-
-    WPRestAPI().need_admin_login()
 
     cleaner = TmpCleaner()
     return cleaner.list_all_tmpdirs()
 
 
-@app.get("/system/tmpdir/purge")
+@admin_auth_router.get("/system/tmpdir/purge")
 async def purge_tmpdirs() -> dict:
     '''Purge all temporary directories created by mgxhub'''
-
-    WPRestAPI().need_admin_login()
 
     cleaner = TmpCleaner()
     cleaner.purge_all_tmpdirs()
 
     return JSONResponse(status_code=202, content="Purge command sent")
 
-@app.get("/system/backup/sqlite")
+
+@admin_auth_router.get("/system/backup/sqlite")
 async def backup_sqlite(background_tasks: BackgroundTasks) -> dict:
     '''Backup SQLite3 database'''
-
-    WPRestAPI().need_admin_login()
 
     if os.path.exists(cfg.get('database', 'sqlite')):
         background_tasks.add_task(sqlite3backup)
         return JSONResponse(status_code=202, content="Backup command sent")
     return JSONResponse(status_code=404, content="No valid SQLite3 database found")
+
 
 @app.get("/game/detail")
 async def get_game(guid: str, lang: str = 'en') -> GameDetail | None:
@@ -189,7 +182,8 @@ async def upload_a_record(
     recfile: UploadFile = File(...),
     lastmod: str = Form(...),
     force_replace: bool = Form(False),
-    delete_after: bool = Form(True)
+    delete_after: bool = Form(True),
+    creds: HTTPBasicCredentials = Depends(security)
 ):
     '''Upload a record file to the server.
 
@@ -197,7 +191,7 @@ async def upload_a_record(
     - **lastmod**: The last modified time of the record file.
     '''
 
-    if force_replace and not WPRestAPI().need_admin_login(brutal_term=False):
+    if force_replace and not WPRestAPI(creds.username, creds.password).need_admin_login(brutal_term=False):
         force_replace = False
 
     uploaded = FileObjHandler(
@@ -209,11 +203,10 @@ async def upload_a_record(
         }
     )
 
-    # TODO 到底返回什么样的值？要不要返回地图？
     return uploaded.process()
 
 
-@app.get("/game/reparse")
+@admin_auth_router.get("/game/reparse")
 async def reparse_a_record(background_tasks: BackgroundTasks, guid: str) -> dict:
     '''Reparse a record file to update its information.
 
@@ -221,8 +214,6 @@ async def reparse_a_record(background_tasks: BackgroundTasks, guid: str) -> dict
 
     - **guid**: The GUID of the record file.
     '''
-
-    WPRestAPI().need_admin_login()
 
     def _reparse(guid):
         oss = S3Adapter(**cfg.s3)
@@ -323,18 +314,18 @@ async def get_player_rating(
     return db.fetch_player_rating(player_hash, version_code, matchup, order, page_size)
 
 
-@app.get("/auth/onlineusers")
+@admin_auth_router.get("/auth/onlineusers")
 async def list_online_users() -> dict:
     '''Check if a user is logged in'''
 
-    WPRestAPI().need_admin_login()
     return LOGGED_IN_CACHE
 
 
-@app.get("/auth/logoutall")
+@admin_auth_router.get("/auth/logoutall")
 async def logout_all_users() -> dict:
     '''Logout all users'''
 
-    WPRestAPI().need_admin_login()
     LOGGED_IN_CACHE.clear()
     return {"status": "All users logged out"}
+
+app.include_router(admin_auth_router)
