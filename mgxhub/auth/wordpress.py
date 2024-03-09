@@ -20,6 +20,7 @@ class WPRestAPI:
 
     _api_route = '/wp-json/wp/v2/users/me'
     _api_url = None
+    _creds_set = True
 
     def __init__(self, wp_cred: list | None = None):
         '''Initialize WordPress REST API client.'''
@@ -35,7 +36,7 @@ class WPRestAPI:
 
         if not self._url or not self._username or not self._password:
             logger.warning('WordPress credentials are not set')
-            self.creds_set = False
+            self._creds_set = False
             return
 
         self._api_url = urljoin(self._url, self._api_route.lstrip('/'))
@@ -43,7 +44,7 @@ class WPRestAPI:
     def authenticate(self, admin: bool = False) -> bool:
         '''Authenticate user with WordPress.'''
 
-        if not self.creds_set:
+        if not self._creds_set:
             return False
         
         if admin:

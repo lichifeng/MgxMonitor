@@ -61,6 +61,16 @@ class DBHandler:
 
         return self._db_session
 
+    def get_record_files(self, game_guid: str) -> list[str]:
+        '''Get record files(md5) of a game by its GUID.
+
+        Args:
+            game_guid: GUID of the game.
+        '''
+
+        files = self.session.query(File.md5).filter(File.game_guid == game_guid).all()
+        return [f[0] for f in files]
+
     def get_game(self, game_guid: str, lang: str = 'en') -> GameDetail | None:
         '''Get details for a game by its GUID.
 
@@ -86,6 +96,21 @@ class DBHandler:
 
         return GameDetail(game_basic, player_data, file_data, chat_data, lang)
 
+    def _update_gametime(self, game: Game, game_time: datetime) -> bool:
+        '''Update the game time of a game.
+
+        Args:
+            game_guid: GUID of the game.
+            game_time: New game time.
+        '''
+
+        if game:
+            game.game_time = game_time
+            self.session.commit()
+            print(f'game_time updated: {game.game_guid}')
+            return True
+        return False
+    
     def add_game(self, d: dict, t: str | None = None, source: str = "") -> tuple[str, str]:
         '''Add a game to the database.
 
@@ -97,15 +122,6 @@ class DBHandler:
         Returns:
             A tuple of two strings. The first string is the status of the operation, which is one of "exists", "invalid", "success". The second string is the GUID of the game. 
         '''
-
-        game = self.session.query(Game).filter(Game.game_guid == d.get('guid')).first()
-        if game and isinstance(game.duration, (int, float)):
-            if game.duration > d.get('duration'):
-                return "exists", game.game_guid
-            if game.duration == d.get('duration'):
-                same_file = self.session.query(File).filter(File.md5 == d.get('md5')).first()
-                if same_file:
-                    return "duplicated", game.game_guid
 
         if not d.get('guid'):
             return "invalid", "missing guid"
@@ -123,6 +139,24 @@ class DBHandler:
                 pass
         if game_time < datetime(1999, 3, 30):
             game_time = datetime.now()
+
+        game = self.session.query(Game).filter(Game.game_guid == d.get('guid')).first()
+        if game and isinstance(game.duration, (int, float)):
+            update_gametime = False
+            if hasattr(game, 'game_time') and game_time < game.game_time:
+                game.game_time = game_time
+                update_gametime = True
+
+            if game.duration > d.get('duration'):
+                if update_gametime:
+                    self._update_gametime(game, game_time)
+                return "exists", game.game_guid
+            if game.duration == d.get('duration'):
+                same_file = self.session.query(File).filter(File.md5 == d.get('md5')).first()
+                if same_file:
+                    if update_gametime:
+                        self._update_gametime(game, game_time)
+                    return "duplicated", game.game_guid
 
         merged_game = self.session.merge(Game(
             id=game.id if game else None,

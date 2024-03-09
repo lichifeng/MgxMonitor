@@ -1,6 +1,6 @@
 '''Used to communicate with a S3 compatible server'''
 
-from io import IOBase
+from io import IOBase, BytesIO
 import os
 import json
 from minio import Minio
@@ -38,6 +38,12 @@ class S3Adapter:
             region: str | None = None,
             bucket: str | None = None
     ):
+        '''Initialize the S3Adapter instance
+
+        Example:
+            s3 = S3Adapter(**cfg.s3)
+        '''
+
         self._endpoint = endpoint
         self._accesskey = accesskey
         self._secretkey = secretkey
@@ -135,3 +141,21 @@ class S3Adapter:
 
         self._client.remove_object(self.bucket, file_path)
         logger.warning(f'[S3] Removed {file_path} from {self.bucket}')
+
+    def download(self, file_path: str) -> object | None:
+        '''Download a file from the server and return a file object.
+
+        Args:
+            file_path (str): The file path to download
+
+        Returns:
+            object: The downloaded file object
+        '''
+
+        try:
+            response = self._client.get_object(self._bucket, file_path)
+            logger.debug(f'[S3] Downloaded {file_path} from {self.bucket}')
+            return BytesIO(response.data)
+        except Exception as e:
+            logger.error(f'[S3] Download failed: {e}')
+            return None

@@ -43,7 +43,8 @@ class DefaultConfig:
             'accesskey': 'Q3AM3UQ867SPQQA43P2F',
             'secretkey': 'zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG',
             'region': 'us-east-1',
-            'bucket': 'mgxhub-test-bucket'
+            'bucket': 'mgxhub-test-bucket',
+            'recorddir': '/records/'
         }
 
         # Rating configuration

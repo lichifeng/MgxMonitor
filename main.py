@@ -4,15 +4,16 @@ import os
 import io
 import asyncio
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, Form, UploadFile, File
+from fastapi import FastAPI, Form, UploadFile, File, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, JSONResponse
 from mgxhub.model.webapi import GameDetail
 from mgxhub.handler import DBHandler, FileObjHandler, TmpCleaner
 from mgxhub.rating import RatingLock
 from mgxhub.watcher import RecordWatcher
 from mgxhub.config import cfg, DefaultConfig
 from mgxhub.auth import WPRestAPI, LOGGED_IN_CACHE
+from mgxhub.storage import S3Adapter
 
 app = FastAPI()
 db = DBHandler()
@@ -93,12 +94,11 @@ async def start_rating_calc(
     if lock.rating_running():
         if shcedule:
             lock.schedule()
-            raise HTTPException(
-                status_code=202, detail="Rating calculation process is already running, scheduled the next calculation")
-        raise HTTPException(status_code=409, detail="Rating calculation process is already running")
+            return JSONResponse(status_code=202, content="Rating calculation process is already running, scheduled the next calculation")
+        return JSONResponse(status_code=409, content="Rating calculation process is already running")
 
     lock.start_calc(batch_size=batch_size, duration_threshold=duration_threshold, schedule=shcedule)
-    raise HTTPException(status_code=202, detail="Rating calculation process started")
+    return JSONResponse(status_code=202, content="Rating calculation process started")
 
 
 @app.get("/system/rating/unlock")
@@ -110,9 +110,9 @@ async def unlock_rating(force: bool = False) -> dict:
     lock = RatingLock()
     lock.unlock(force)
     if lock.lock_file_exists():
-        raise HTTPException(status_code=409, detail="Failed to unlock")
+        return JSONResponse(status_code=409, content="Failed to unlock")
 
-    raise HTTPException(status_code=202, detail="Unlocked")
+    return JSONResponse(status_code=202, content="Unlocked")
 
 
 @app.get("/system/tmpdir/list")
@@ -134,7 +134,7 @@ async def purge_tmpdirs() -> dict:
     cleaner = TmpCleaner()
     cleaner.purge_all_tmpdirs()
 
-    raise HTTPException(status_code=202, detail="Purge command sent")
+    return JSONResponse(status_code=202, content="Purge command sent")
 
 
 @app.get("/game/detail")
@@ -150,7 +150,7 @@ async def get_game(guid: str, lang: str = 'en') -> GameDetail | None:
     if details:
         return details
 
-    raise HTTPException(status_code=404, detail=f"Game profile [{guid}] not found")
+    return JSONResponse(status_code=404, content=f"Game profile [{guid}] not found")
 
 
 @app.get("/game/random")
@@ -199,6 +199,36 @@ async def upload_a_record(
 
     # TODO 到底返回什么样的值？要不要返回地图？
     return uploaded.process()
+
+
+@app.get("/game/reparse")
+async def reparse_a_record(background_tasks: BackgroundTasks, guid: str) -> dict:
+    '''Reparse a record file to update its information.
+
+    Used when parser is updated.
+
+    - **guid**: The GUID of the record file.
+    '''
+
+    WPRestAPI().need_admin_login()
+
+    def _reparse(guid):
+        oss = S3Adapter(**cfg.s3)
+        for fmd5 in db.get_record_files(guid):
+            downloaded = oss.download(f"/records/{fmd5}.zip")
+            if downloaded:
+                reparsed = FileObjHandler(
+                    downloaded, f"{fmd5}.mgx", datetime.now().isoformat(),
+                    {
+                        "s3_replace": False,
+                        "delete_after": True,
+                        "db_handler": db
+                    }
+                )
+                reparsed.process()
+
+    background_tasks.add_task(_reparse, guid)
+    return JSONResponse(status_code=202, content={"detail": f"Reparse command sent for [{guid}]"})
 
 
 @app.get("/stats/total")
