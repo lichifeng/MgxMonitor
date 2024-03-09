@@ -25,6 +25,7 @@ class DefaultConfig:
         self.config['system']['mapdir'] = os.path.join(self.config['system']['workdir'], 'map')
         self.config['system']['logdir'] = os.path.join(self.config['system']['workdir'], 'log')
         self.config['system']['uploaddir'] = os.path.join(self.config['system']['workdir'], 'upload')
+        self.config['system']['backupdir'] = os.path.join(self.config['system']['workdir'], 'backup')
         self.config['system']['tmpdir'] = os.path.join(self.config['system']['workdir'], 'tmp')
         self.config['system']['tmpprefix'] = 'tmp_'
         self.config['system']['errordir'] = os.path.join(self.config['system']['workdir'], 'error')

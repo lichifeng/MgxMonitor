@@ -5,3 +5,4 @@ fastapi[all]
 uvicorn[standard]
 minio
 requests
+apsw

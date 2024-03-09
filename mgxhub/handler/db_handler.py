@@ -107,7 +107,7 @@ class DBHandler:
         if game:
             game.game_time = game_time
             self.session.commit()
-            print(f'game_time updated: {game.game_guid}')
+            logger.info(f'[DB] game_time updated: {game.game_guid}')
             return True
         return False
     

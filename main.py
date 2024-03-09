@@ -14,6 +14,7 @@ from mgxhub.watcher import RecordWatcher
 from mgxhub.config import cfg, DefaultConfig
 from mgxhub.auth import WPRestAPI, LOGGED_IN_CACHE
 from mgxhub.storage import S3Adapter
+from mgxhub.util.sqlite3 import sqlite3backup
 
 app = FastAPI()
 db = DBHandler()
@@ -136,6 +137,16 @@ async def purge_tmpdirs() -> dict:
 
     return JSONResponse(status_code=202, content="Purge command sent")
 
+@app.get("/system/backup/sqlite")
+async def backup_sqlite(background_tasks: BackgroundTasks) -> dict:
+    '''Backup SQLite3 database'''
+
+    WPRestAPI().need_admin_login()
+
+    if os.path.exists(cfg.get('database', 'sqlite')):
+        background_tasks.add_task(sqlite3backup)
+        return JSONResponse(status_code=202, content="Backup command sent")
+    return JSONResponse(status_code=404, content="No valid SQLite3 database found")
 
 @app.get("/game/detail")
 async def get_game(guid: str, lang: str = 'en') -> GameDetail | None:
@@ -177,7 +188,8 @@ async def get_latest_games(limit: int = 100) -> dict:
 async def upload_a_record(
     recfile: UploadFile = File(...),
     lastmod: str = Form(...),
-    force_replace: bool = Form(False)
+    force_replace: bool = Form(False),
+    delete_after: bool = Form(True)
 ):
     '''Upload a record file to the server.
 
@@ -192,7 +204,7 @@ async def upload_a_record(
         recfile.file, recfile.filename, lastmod,
         {
             "s3_replace": force_replace,
-            "delete_after": True,
+            "delete_after": delete_after,
             "db_handler": db
         }
     )
