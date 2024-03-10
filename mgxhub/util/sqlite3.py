@@ -26,7 +26,7 @@ def sqlite3backup(src_path: str = '', dest_path: str = '') -> None:
         with dest_conn.backup("main", src_conn, "main") as backup:
             while not backup.done:
                 backup.step(200)  # copy up to 200 pages each time
-                # print(f'\r{(backup.pagecount-backup.remaining)/backup.pagecount*100:.2f}%')
+                # print(f'\r{(backup.pagecount-backup.remaining)/backup.pagecount*100:.2f}%', end='')
 
     # zip the backup file, then remove the original
     root_dir = os.path.dirname(dest_path)

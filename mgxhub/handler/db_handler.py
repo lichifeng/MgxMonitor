@@ -5,6 +5,7 @@ This version is for SQLite only. Need modification for other databases.
 # pylint: disable=E1102
 
 import os
+import string
 from datetime import datetime
 from hashlib import md5
 from sqlalchemy import create_engine, asc, desc, text, func
@@ -14,6 +15,13 @@ from mgxhub.model.orm import Base, Game, Player, File, Chat, LegacyInfo
 from mgxhub.model.webapi import GameDetail
 from mgxhub.config import cfg
 from mgxhub.logger import logger
+from mgxhub.model.searchcriteria import SearchCriteria
+
+
+def remove_unprintable_chars(s: str) -> str:
+    '''Remove unprintable ASCII characters and whitespace from players' names.'''
+
+    return ''.join(c for c in s if c in string.printable or ord(c) >= 0x80).strip()
 
 
 class DBHandler:
@@ -110,7 +118,7 @@ class DBHandler:
             logger.info(f'[DB] game_time updated: {game.game_guid}')
             return True
         return False
-    
+
     def add_game(self, d: dict, t: str | None = None, source: str = "") -> tuple[str, str]:
         '''Add a game to the database.
 
@@ -137,7 +145,7 @@ class DBHandler:
                 game_time = min(game_time, t_input)
             except ValueError:
                 pass
-        if game_time < datetime(1999, 3, 30):
+        if game_time < datetime(1999, 3, 30) or game_time > datetime.now():
             game_time = datetime.now()
 
         game = self.session.query(Game).filter(Game.game_guid == d.get('guid')).first()
@@ -186,12 +194,17 @@ class DBHandler:
             self.session.query(Player).filter(Player.game_guid == d.get('guid')).delete()
 
             for p in players:
+                if p.get('name'):
+                    sanitized_name = remove_unprintable_chars(p.get('name')) or '<NULL>'
+                else:
+                    sanitized_name = '<NULL>'
+
                 player_batch.append({
                     'game_guid': d.get('guid'),
                     'slot': p.get('slot'),
                     'index_player': p.get('index'),
-                    'name': p.get('name'),
-                    'name_hash': md5(p.get('name').encode("utf-8")).hexdigest() if p.get('name') else None,
+                    'name': sanitized_name,
+                    'name_hash': md5(sanitized_name.encode('utf-8')).hexdigest(),
                     'type': p.get('typeEn'),
                     'team': p.get('team'),
                     'color_index': p.get('colorIndex'),
@@ -660,3 +673,174 @@ class DBHandler:
         '''Async version of fetch_player_recent_games()'''
 
         return self.fetch_player_recent_games(name_hash, limit)
+
+    def search_players_by_name(
+            self,
+            name: str,
+            stype: str = 'std',
+            orderby: str = 'nagd',
+            page: int = 0,
+            page_size: int = 100
+    ) -> dict:
+        '''Search players by name.
+
+        Args:
+            name: the name to search.
+            stype: search type. 'std' for standard, 'prefix' for prefix, 'suffix' for suffix, 'exact' for exact match.
+            orderby: order by. 'nagd' for name asc, game_count desc, 'gdnd' for game_count desc, name desc, etc.
+            page: page number.
+            page_size: page size.
+        '''
+
+        name = remove_unprintable_chars(name)
+
+        if page < 0 or page_size < 1:
+            return {'players': [], 'generated_at': datetime.now().isoformat()}
+
+        order_parts = []
+        if len(orderby) < 4:
+            order_parts = ["LENGTH(name)", "game_count", "ASC", "DESC"]
+        else:
+            if orderby[0].lower() == 'g':
+                order_parts.extend(["game_count", "LENGTH(name)"])
+            else:
+                order_parts.extend(["LENGTH(name)", "game_count"])
+            if orderby[1].lower() == 'd':
+                order_parts.append("DESC")
+            else:
+                order_parts.append("ASC")
+            if orderby[3].lower() == 'd':
+                order_parts.append("DESC")
+            else:
+                order_parts.append("ASC")
+        order_cmd = f"{order_parts[0]} {order_parts[2]}, {order_parts[1]} {order_parts[3]}"
+
+        sql = text(f"""
+            SELECT name, name_hash, COUNT(game_guid) AS game_count
+            FROM players
+            WHERE name LIKE :name
+            GROUP BY name
+            ORDER BY {order_cmd}
+            LIMIT :page_size
+            OFFSET :page;
+        """)
+
+        if stype == 'prefix':
+            name = f"{name}%"
+        elif stype == 'suffix':
+            name = f"%{name}"
+        elif stype == 'exact':
+            name = f"{name}"
+        else:
+            name = f"%{name}%"
+
+        players = self.session.execute(
+            sql,
+            {
+                "name": name,
+                "page_size": page_size,
+                "page": page * page_size
+            }
+        ).fetchall()
+        players = [list(row) for row in players]
+        current_time = datetime.now().isoformat()
+        return {'players': players, 'generated_at': current_time}
+
+    def search_games(self, criteria: SearchCriteria) -> dict:
+        '''Search games.
+
+        Args:
+            criteria: Search criteria.
+
+        Note:
+            The search criteria is defined in mgxhub/model/searchcriteria.py.
+            1) game_guid: GUID of the game. If given, other criteria will be ignored.
+        '''
+        where_clause = []
+        if criteria.game_guid and len(criteria.game_guid) == 32:
+            where_clause.append(f"game_guid = '{criteria.game_guid}'")
+        else:
+            if criteria.duration_min:
+                where_clause.append(f"duration >= {criteria.duration_min}")
+            if criteria.duration_max:
+                where_clause.append(f"duration <= {criteria.duration_max}")
+            if criteria.include_ai is not None:
+                where_clause.append(f"include_ai = {criteria.include_ai}")
+            if criteria.is_multiplayer is not None:
+                where_clause.append(f"is_multiplayer = {criteria.is_multiplayer}")
+            if criteria.population_min:
+                where_clause.append(f"population >= {criteria.population_min}")
+            if criteria.population_max:
+                where_clause.append(f"population <= {criteria.population_max}")
+            if criteria.instruction:
+                where_clause.append(f"instruction LIKE '%{criteria.instruction}%'")
+            if criteria.gametime_min:
+                where_clause.append(f"game_time >= '{criteria.gametime_min * 60}'")
+            if criteria.gametime_max:
+                where_clause.append(f"game_time <= '{criteria.gametime_max * 60}'")
+            if criteria.map_name:
+                where_clause.append(f"map_name LIKE '%{criteria.map_name}%'")
+            if isinstance(criteria.speed, list) and len(criteria.speed) > 0:
+                speed_values = ', '.join(f"'{item}'" for item in criteria.speed)
+                where_clause.append(f"speed IN ({speed_values})")
+            if isinstance(criteria.victory_type, list) and len(criteria.victory_type) > 0:
+                victory_type_values = ', '.join(f"'{item}'" for item in criteria.victory_type)
+                where_clause.append(f"victory_type IN ({victory_type_values})")
+            if isinstance(criteria.version_code, list) and len(criteria.version_code) > 0:
+                version_code_values = ', '.join(f"'{item}'" for item in criteria.version_code)
+                where_clause.append(f"version_code IN ({version_code_values.upper()})")
+            if isinstance(criteria.matchup, list) and len(criteria.matchup) > 0:
+                matchup_values = ', '.join(f"'{item}'" for item in criteria.matchup)
+                where_clause.append(f"matchup IN ({matchup_values})")
+            if isinstance(criteria.map_size, list) and len(criteria.map_size) > 0:
+                map_size_values = ', '.join(f"'{item}'" for item in criteria.map_size)
+                where_clause.append(f"map_size IN ({map_size_values})")
+
+        where_clause = " AND ".join(where_clause)
+        if where_clause:
+            where_clause = f"WHERE {where_clause}"
+
+        if criteria.order_by in ['created', 'duration', 'game_time']:
+            order_by = criteria.order_by
+        else:
+            order_by = 'game_time'
+        if criteria.order_desc:
+            order_by += " DESC"
+
+        query = text(f"""
+            SELECT *
+            FROM games
+            {where_clause}
+            ORDER BY {order_by}
+            LIMIT {criteria.page_size}
+            OFFSET {criteria.page * criteria.page_size};
+        """)
+        result = self.session.execute(query)
+        games = [list(row) for row in result.fetchall()]
+        current_time = datetime.now().isoformat()
+        return {'games': games, 'generated_at': current_time}
+
+    def stat_unique_game_options(self) -> dict:
+        '''Get unique game options.'''
+
+        query = text("""
+            SELECT 'speed' AS column_name, unique_value FROM (SELECT DISTINCT speed AS unique_value FROM games)
+            UNION ALL
+            SELECT 'victory_type' AS column_name, unique_value FROM (SELECT DISTINCT victory_type AS unique_value FROM games)
+            UNION ALL
+            SELECT 'version_code' AS column_name, unique_value FROM (SELECT DISTINCT version_code AS unique_value FROM games)
+            UNION ALL
+            SELECT 'matchup' AS column_name, unique_value FROM (SELECT DISTINCT matchup AS unique_value FROM games)
+            UNION ALL
+            SELECT 'map_size' AS column_name, unique_value FROM (SELECT DISTINCT map_size AS unique_value FROM games);
+        """)
+
+        result = self.session.execute(query).fetchall()
+        stats = {}
+        for name, optval in result:
+            if name not in stats:
+                stats[name] = []
+            stats[name].append(optval)
+
+        current_time = datetime.now().isoformat()
+        return {'stats': stats, 'generated_at': current_time}

@@ -2,6 +2,7 @@
 
 # pylint: disable=import-error
 
+from hashlib import sha256
 from datetime import datetime
 from urllib.parse import urljoin
 import urllib3
@@ -40,16 +41,13 @@ class WPRestAPI:
 
         self._api_url = urljoin(self._url, self._api_route.lstrip('/'))
 
-    def authenticate(self, admin: bool = False) -> bool:
+    def authenticate(self, admin: bool = False) -> tuple[bool, list]:
         '''Authenticate user with WordPress.'''
 
         if not self._creds_set:
             return False
         
-        if admin:
-            params = {'context': 'edit'}
-        else:
-            params = {'context': 'view'}
+        params = {'context': 'edit'}
 
         response = requests.get(
             self._api_url,
@@ -61,14 +59,16 @@ class WPRestAPI:
 
         if response.status_code == 200:
             resp = response.json()
-            if admin and isinstance(resp.get('roles'), list):
-                return 'administrator' in resp['roles']
-            return resp.get('name') == self._username
+            if not isinstance(resp.get('roles'), list):
+                return False
+            if admin:
+                return 'administrator' in resp['roles'], resp.get('roles')
+            return resp.get('name') == self._username, resp.get('roles')
 
         logger.warning(f'Failed to authenticate user {self._username} with WordPress')
-        return False
+        return False, []
 
-    def need_user_login(self, hint: str = 'Need user authentication', admin: bool = False, brutal_term: bool = True) -> bool:
+    def need_user_login(self, hint: str = 'Need user authentication', need_admin: bool = False, brutal_term: bool = True) -> bool:
         '''Check if user needs to login to WordPress.
         
         Args:
@@ -77,12 +77,19 @@ class WPRestAPI:
             brutal_term: Whether to terminate the process if the user is not logged in.
         '''
 
-        if self._username in LOGGED_IN_CACHE and\
-                LOGGED_IN_CACHE[self._username] > datetime.now().timestamp() - 60 * int(cfg.get('wordpress', 'login_expire')):
+        user_hash = sha256((self._username + self._password).encode()).hexdigest()
+        if user_hash in LOGGED_IN_CACHE and\
+                LOGGED_IN_CACHE[user_hash]['created'] > datetime.now().timestamp() - 60 * int(cfg.get('wordpress', 'login_expire')):
+            if need_admin:
+                return 'administrator' in LOGGED_IN_CACHE[user_hash]['roles']
             return True
 
-        if self.authenticate(admin):
-            LOGGED_IN_CACHE[self._username] = datetime.now().timestamp()
+        authed, user_roles = self.authenticate(need_admin)
+        if authed:
+            LOGGED_IN_CACHE[user_hash] = {
+                'created': datetime.now().timestamp(),
+                'roles': user_roles
+            }
             return True
 
         if brutal_term:
@@ -92,4 +99,4 @@ class WPRestAPI:
     def need_admin_login(self, hint: str = 'Need admin authentication', brutal_term: bool = True) -> bool:
         '''Check if user needs to login to WordPress as an administrator.'''
 
-        return self.need_user_login(hint, admin=True, brutal_term=brutal_term)
+        return self.need_user_login(hint, need_admin=True, brutal_term=brutal_term)

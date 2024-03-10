@@ -4,7 +4,7 @@ import os
 import io
 import asyncio
 from datetime import datetime
-from fastapi import FastAPI, Form, UploadFile, File, BackgroundTasks, Depends, APIRouter
+from fastapi import FastAPI, Form, UploadFile, File, BackgroundTasks, Depends, APIRouter, Body, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -17,6 +17,7 @@ from mgxhub.auth import WPRestAPI, LOGGED_IN_CACHE
 from mgxhub.storage import S3Adapter
 from mgxhub.util.sqlite3 import sqlite3backup
 from mgxhub.auth.authrouter import need_admin_login, security
+from mgxhub.model.searchcriteria import SearchCriteria
 
 app = FastAPI()
 admin_auth_router = APIRouter(dependencies=[Depends(need_admin_login)])
@@ -234,6 +235,22 @@ async def reparse_a_record(background_tasks: BackgroundTasks, guid: str) -> dict
     return JSONResponse(status_code=202, content={"detail": f"Reparse command sent for [{guid}]"})
 
 
+@app.post("/game/search")
+async def search_games(criteria: SearchCriteria = Body(...)) -> dict:
+    '''Search games by query string'''
+
+    if not criteria:
+        raise HTTPException(status_code=400, detail="Invalid search criteria")
+
+    return db.search_games(criteria)
+
+
+@app.get("/game/optionstats")
+async def get_game_option_stats() -> dict:
+    '''Get game option stats'''
+
+    return db.stat_unique_game_options()
+
 @app.get("/stats/total")
 async def get_index_stats() -> dict:
     '''Get index stats'''
@@ -279,6 +296,19 @@ async def get_player_comprehensive(player_hash: str) -> dict:
         "recent_games": result[2].get('games', []),
         "close_friends": result[3].get('players', [])
     }
+
+
+@app.get("/player/searchname")
+async def search_player_by_name(
+    player_name: str,
+    stype: str = 'std',
+    orderby: str = 'nagd',
+    page: int = 0,
+    page_size: int = 100
+) -> dict:
+    '''Search player by name'''
+
+    return db.search_players_by_name(player_name, stype, orderby, page, page_size)
 
 
 @app.get("/rating/stats")
