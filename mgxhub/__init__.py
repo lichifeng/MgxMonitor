@@ -1,10 +1,5 @@
 '''mgxhub main source code'''
 
-class Singleton(type):
-    '''Singleton metaclass.'''
-
-    _instances = {}
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
+from .config import cfg
+from .logger import logger
+from .db import db

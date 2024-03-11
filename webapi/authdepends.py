@@ -2,7 +2,8 @@
 
 from fastapi import Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from .wordpress import WPRestAPI
+
+from mgxhub.auth.wordpress import WPRestAPI
 
 security = HTTPBasic()
 

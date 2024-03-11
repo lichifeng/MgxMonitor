@@ -4,8 +4,8 @@ from datetime import datetime
 import os
 import shutil
 import apsw
-from mgxhub.config import cfg
-from mgxhub.logger import logger
+from mgxhub import cfg
+from mgxhub import logger
 
 
 def sqlite3backup(src_path: str = '', dest_path: str = '') -> None:

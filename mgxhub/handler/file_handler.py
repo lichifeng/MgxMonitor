@@ -1,25 +1,28 @@
 '''Used to handle the file uploaded or found in monitored directory.'''
 # pylint: disable=R0903
 
-import os
 import asyncio
 import base64
-import tempfile
-import zipfile
-import threading
-import shutil
+import os
 import random
+import shutil
 import string
+import tempfile
+import threading
+import zipfile
 from datetime import datetime
 from io import BytesIO
+
 import patoolib
 from PIL import Image
-from mgxhub.parser import parse
-from mgxhub.storage import S3Adapter
+
+from mgxhub import db
 from mgxhub.config import cfg
+from mgxhub.db.operation import add_game
 from mgxhub.logger import logger
+from mgxhub.parser import parse
 from mgxhub.rating import RatingLock
-from .db_handler import DBHandler
+from mgxhub.storage import S3Adapter
 
 
 class FileHandler:
@@ -53,14 +56,11 @@ class FileHandler:
 
     _delete_after = False
 
-    _db_handler = None
-
     def __init__(
             self,
             file_path: str,
             s3_replace: bool = False,
-            delete_after: bool = False,
-            db_handler: DBHandler = None
+            delete_after: bool = False
     ):
         '''Initialize the FileHandler.'''
 
@@ -68,7 +68,6 @@ class FileHandler:
         self._set_current_file(file_path)
         self._file_extension = self._current_extension
         self._delete_after = delete_after
-        self._db_handler = db_handler
 
         self._map_dir = cfg.get('system', 'mapdir')
 
@@ -216,7 +215,7 @@ class FileHandler:
         if 'map' in parsed_result and 'base64' in parsed_result['map'] and self._map_dir:
             tasks.append(self._save_map(parsed_result['guid'], parsed_result['map']['base64']))
 
-        tasks.append(self._save_to_db(parsed_result, self._db_handler))
+        tasks.append(self._save_to_db(parsed_result))
 
         if self._s3_conn:
             try:
@@ -303,7 +302,7 @@ class FileHandler:
 
         return {'status': 'success', 'message': 'compressed file was scaduled for processing'}
 
-    async def _save_to_db(self, data: dict, db: DBHandler) -> tuple[str, str]:
+    async def _save_to_db(self, data: dict) -> tuple[str, str]:
         '''Save the parsed data to the database.
 
         Args:
@@ -312,17 +311,15 @@ class FileHandler:
         Returns:
             str: The result of the saving.
         '''
-        if not db:
-            result = 'error', 'DBHandler not set'
-        else:
-            try:
-                result = db.add_game(data)
-                logger.info(f'[DB] Add: {result}')
-                if result[0] in ['success', 'updated']:
-                    RatingLock().start_calc(schedule=True)
-            except Exception as e:
-                logger.error(f'_save_to_db error: {e}')
-                result = 'error', str(e)
+
+        try:
+            result = add_game(data)
+            logger.info(f'[DB] Add: {result}')
+            if result[0] in ['success', 'updated']:
+                RatingLock().start_calc(schedule=True)
+        except Exception as e:
+            logger.error(f'_save_to_db error: {e}')
+            result = 'error', str(e)
 
         return result
 

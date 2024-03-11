@@ -1,7 +1,7 @@
 '''Load configuration'''
 
 import os
-from mgxhub import Singleton
+from ..util.singleton import Singleton
 from .default import DefaultConfig
 
 

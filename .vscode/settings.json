@@ -15,5 +15,11 @@
   "pylint.args": [
     "--disable=W1203",
     "--max-line-length=120"
-  ]
+  ],
+  "[python]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "editor.formatOnSave": true
 }
