@@ -4,7 +4,7 @@ from fastapi import Depends, File, Form, UploadFile
 from fastapi.security import HTTPBasicCredentials
 
 from mgxhub.auth import WPRestAPI
-from mgxhub.handler import FileObjHandler
+from mgxhub.processor import FileObjProcessor
 from webapi import app
 from webapi.authdepends import security
 
@@ -32,7 +32,7 @@ async def upload_a_record(
     if force_replace and not WPRestAPI(creds.username, creds.password).need_admin_login(brutal_term=False):
         force_replace = False
 
-    uploaded = FileObjHandler(
+    uploaded = FileObjProcessor(
         recfile.file, recfile.filename, lastmod,
         {
             "s3_replace": force_replace,

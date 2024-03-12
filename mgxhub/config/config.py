@@ -1,7 +1,9 @@
 '''Load configuration'''
 
 import os
-from ..util.singleton import Singleton
+
+from mgxhub.singleton import Singleton
+
 from .default import DefaultConfig
 
 
@@ -50,7 +52,7 @@ class Config(DefaultConfig, metaclass=Singleton):
         if not cfg_path:
             cfg_path = os.getenv('MGXHUB_CONFIG', '')
             # print(f'Configuration file is not specified, using environment variable MGXHUB_CONFIG: {cfg_path}')
-            
+
         cfg_path = os.path.join(self.project_root(), cfg_path)
         if os.path.exists(cfg_path) and os.path.isfile(cfg_path):
             self.config.read(cfg_path)

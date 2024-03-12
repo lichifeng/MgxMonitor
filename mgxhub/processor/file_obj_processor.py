@@ -5,12 +5,14 @@ import os
 import shutil
 import tempfile
 from datetime import datetime
+
 from mgxhub.config import cfg
 from mgxhub.logger import logger
-from .file_handler import FileHandler
+
+from .file_processor import FileProcessor
 
 
-class FileObjHandler(FileHandler):
+class FileObjProcessor(FileProcessor):
     """A wrapper of FileHandler for file-like objects."""
 
     _tmpdir: str | None = None

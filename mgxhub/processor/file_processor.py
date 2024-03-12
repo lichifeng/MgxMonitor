@@ -16,7 +16,6 @@ from io import BytesIO
 import patoolib
 from PIL import Image
 
-from mgxhub import db
 from mgxhub.config import cfg
 from mgxhub.db.operation import add_game
 from mgxhub.logger import logger
@@ -25,7 +24,7 @@ from mgxhub.rating import RatingLock
 from mgxhub.storage import S3Adapter
 
 
-class FileHandler:
+class FileProcessor:
     '''Used to handle the file uploaded or found in monitored directory.
 
     The main process() needs to be called manually.

@@ -1,8 +1,9 @@
-import unittest
 import logging
 import os
-from mgxhub.logger import logger
-from mgxhub.config import cfg
+import unittest
+
+from mgxhub import cfg, logger
+
 
 class TestLoggerFactory(unittest.TestCase):
     def setUp(self):
@@ -27,8 +28,9 @@ class TestLoggerFactory(unittest.TestCase):
         elif os.path.isdir(log_dir):
             logger.info(f'log_dir: {log_dir} exists')
             self.assertIsInstance(logger.handlers[0], logging.handlers.TimedRotatingFileHandler)
-        
+
         logger.info(f'Testing logger with level {logger.level} and handler {logger.handlers[0]}')
+
 
 if __name__ == '__main__':
     unittest.main()

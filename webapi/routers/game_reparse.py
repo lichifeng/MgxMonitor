@@ -6,8 +6,8 @@ from fastapi import BackgroundTasks
 from fastapi.responses import JSONResponse
 
 from mgxhub import cfg, db
-from mgxhub.handler import FileObjHandler
 from mgxhub.model.orm import File
+from mgxhub.processor import FileObjProcessor
 from mgxhub.storage import S3Adapter
 from webapi.admin_api import admin_api
 
@@ -19,7 +19,7 @@ def _reparse(guid: str) -> None:
     for filemd5 in file_md5s:
         downloaded = oss.download(f"/records/{filemd5}.zip")
         if downloaded:
-            reparsed = FileObjHandler(
+            reparsed = FileObjProcessor(
                 downloaded, f"{filemd5}.mgx", datetime.now().isoformat(),
                 {
                     "s3_replace": False,

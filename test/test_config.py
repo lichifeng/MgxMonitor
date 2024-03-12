@@ -1,7 +1,9 @@
-import unittest
-import os
 import configparser
+import os
+import unittest
+
 from mgxhub.config.default import DefaultConfig
+
 
 class TestDefaultConfig(unittest.TestCase):
     def setUp(self):
@@ -23,6 +25,7 @@ class TestDefaultConfig(unittest.TestCase):
         self.default_config.write('test.ini')
         self.assertTrue(os.path.exists(test_file))
         os.remove(test_file)
+
 
 if __name__ == '__main__':
     unittest.main()

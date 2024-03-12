@@ -2,8 +2,8 @@
 
 import os
 import shutil
-from mgxhub.config import cfg
-from mgxhub.logger import logger
+
+from mgxhub import cfg, logger
 
 # Use global variables for @staticmethod
 TMPDIR_PREFIX = cfg.get('system', 'tmpprefix')

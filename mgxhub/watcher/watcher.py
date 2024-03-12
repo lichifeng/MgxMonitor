@@ -3,9 +3,10 @@
 import os
 import threading
 import time
+
 from mgxhub.config import cfg
-from mgxhub.handler import FileHandler, DBHandler
 from mgxhub.logger import logger
+from mgxhub.processor import FileProcessor
 
 
 class RecordWatcher:
@@ -23,14 +24,13 @@ class RecordWatcher:
     def _watch(self):
         '''Watch the work directory for new files and process them'''
 
-        thread_db = DBHandler()
         while True:
             for filename in os.listdir(self.work_dir):
                 file_path = os.path.join(self.work_dir, filename)
                 logger.info(f"[Watcher] Found file: {file_path}")
-                file_handler = FileHandler(file_path, delete_after=True, db_handler=thread_db)
+                file_processor = FileProcessor(file_path, delete_after=True)
                 try:
-                    file_handler.process()
+                    file_processor.process()
                     time.sleep(0.05)
                 except Exception as e:
                     logger.error(f"[Watcher] Error processing file [{file_path}]: {e}")

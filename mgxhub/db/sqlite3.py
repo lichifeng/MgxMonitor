@@ -5,9 +5,9 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from .. import cfg, logger
-from ..model.orm import Base
-from ..util.singleton import Singleton
+from mgxhub import cfg, logger
+from mgxhub.model.orm import Base
+from mgxhub.singleton import Singleton
 
 
 class SQLite3(metaclass=Singleton):
