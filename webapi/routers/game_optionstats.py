@@ -42,4 +42,5 @@ async def get_game_option_stats() -> dict:
         stats[name].append(optval)
 
     current_time = datetime.now().isoformat()
+
     return {'stats': stats, 'generated_at': current_time}

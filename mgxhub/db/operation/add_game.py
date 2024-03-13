@@ -3,7 +3,7 @@
 from datetime import datetime
 from hashlib import md5
 
-from sqlalchemy import insert
+from sqlalchemy.dialects.sqlite import insert
 
 from mgxhub import db, logger
 from mgxhub.model.orm import Chat, File, Game, Player

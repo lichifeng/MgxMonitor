@@ -16,9 +16,8 @@ from io import BytesIO
 import patoolib
 from PIL import Image
 
-from mgxhub.config import cfg
+from mgxhub import cfg, logger
 from mgxhub.db.operation import add_game
-from mgxhub.logger import logger
 from mgxhub.parser import parse
 from mgxhub.rating import RatingLock
 from mgxhub.storage import S3Adapter
@@ -103,7 +102,7 @@ class FileProcessor:
 
         # This part is kind of dirty, referring to a variable possibly defined
         # in some inherited class??
-        # See ./file_obj_handler.py
+        # See ./file_obj_processor.py
         tmpdir_from_child = getattr(self, '_tmpdir', None)
         if tmpdir_from_child and os.path.isdir(tmpdir_from_child):
             shutil.rmtree(tmpdir_from_child)

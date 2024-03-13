@@ -52,7 +52,8 @@ class SQLite3(metaclass=Singleton):
             db_path = cfg.get('database', 'sqlite')
         self._db_path = os.path.join(cfg.get('system', 'projectroot'), db_path)
 
-        self._db_engine = create_engine(f"sqlite:///{self._db_path}", echo=False)
+        self._db_engine = create_engine(f"sqlite:///{self._db_path}",
+                                        echo=(cfg.get('system', 'loglevel').upper() == 'DEBUG'))
         Base.metadata.create_all(self._db_engine)
         self._db_session = Session(self._db_engine)
         logger.debug(f"SQLite loaded: {self._db_path}")  # Watcher thread will print this, too.

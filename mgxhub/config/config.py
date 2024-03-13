@@ -51,8 +51,10 @@ class Config(DefaultConfig, metaclass=Singleton):
 
         if not cfg_path:
             cfg_path = os.getenv('MGXHUB_CONFIG', '')
-            # print(f'Configuration file is not specified, using environment variable MGXHUB_CONFIG: {cfg_path}')
+            if not cfg_path:
+                print('Configuration file or env MGXHUB_CONFIG are not set. Using default configuration.')
 
         cfg_path = os.path.join(self.project_root(), cfg_path)
         if os.path.exists(cfg_path) and os.path.isfile(cfg_path):
             self.config.read(cfg_path)
+            print(f'Configuration file loaded: {cfg_path}')

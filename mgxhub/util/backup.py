@@ -1,11 +1,13 @@
 '''Backup SQLite3 database'''
 
-from datetime import datetime
 import os
 import shutil
+import uuid
+from datetime import datetime
+
 import apsw
-from mgxhub import cfg
-from mgxhub import logger
+
+from mgxhub import cfg, logger
 
 
 def sqlite3backup(src_path: str = '', dest_path: str = '') -> None:
@@ -31,7 +33,10 @@ def sqlite3backup(src_path: str = '', dest_path: str = '') -> None:
     # zip the backup file, then remove the original
     root_dir = os.path.dirname(dest_path)
     base_dir = os.path.basename(dest_path)
-    shutil.make_archive(dest_path, 'zip', root_dir, base_dir)
-    os.remove(dest_path)
+    zip_base = dest_path
+    if os.path.exists(dest_path + '.zip'):
+        zip_base += '_' + uuid.uuid4().hex[:6]
+    shutil.make_archive(zip_base, 'zip', root_dir, base_dir)
     logger.info(f"SQLite3 backup to {dest_path}.zip, original size: {os.path.getsize(
         dest_path)} bytes, zipped size: {os.path.getsize(f'{dest_path}.zip')} bytes")
+    os.remove(dest_path)

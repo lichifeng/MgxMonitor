@@ -1,4 +1,4 @@
-'''Auth routers for FastAPI'''
+'''Depends for authentication.'''
 
 from fastapi import Depends
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -9,14 +9,14 @@ security = HTTPBasic()
 
 
 def need_admin_login(credentials: HTTPBasicCredentials = Depends(security)):
-    '''Check if user needs to login as admin to WordPress.'''
+    '''Check if logged in as an administrator.'''
 
     WPRestAPI(credentials.username, credentials.password).need_admin_login()
     return credentials
 
 
 def need_user_login(credentials: HTTPBasicCredentials = Depends(security)):
-    '''Check if user needs to login to WordPress.'''
+    '''Check if logged in as a user.'''
 
     WPRestAPI(credentials.username, credentials.password).need_user_login()
     return credentials

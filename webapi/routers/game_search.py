@@ -18,7 +18,7 @@ async def search_games(criteria: SearchCriteria = Body(...)) -> dict:
     Returns:
         A dictionary containing the search result.
 
-    Defined in: `mgxhub/model/searchresult.py`
+    Defined in: `webapi/routers/game_search.py`
     '''
 
     if not criteria:

@@ -22,20 +22,18 @@ class FileObjProcessor(FileProcessor):
                  file: io.StringIO | io.BytesIO | io.TextIOWrapper,
                  filename: str,
                  lastmod: str,
-                 handler_opts: dict,
+                 opts: dict,
                  auto_delete: bool = False
                  ):
-        '''Initialize the handler with a file-like object.
+        '''Initialize the processor with a file-like object.
 
         Args:
-            file: The file-like object to be handled.   
-            filename: The name of the file.   
-            lastmod: The last modified time of the file.   
-            handler_opts: Options for the handler.   
-            auto_delete: Whether to delete the temporary file after 
-                         the handler is deleted. Better do this in
-                        FileHandler.
+            **file**: The file-like object to be handled. filename: The name of the
+            file. lastmod: The last modified time of the file. opts: Options for
+            the processor. auto_delete: Whether to delete the temporary file
+            after the processor is deleted. Better do this in FileProcessor.
         '''
+
         self._auto_delete = auto_delete
 
         # Get valid file last modified time
@@ -60,7 +58,7 @@ class FileObjProcessor(FileProcessor):
         os.utime(recfile, (lastmod_obj.timestamp(), lastmod_obj.timestamp()))
         logger.debug(f"File buffer saved: {recfile}")
 
-        super().__init__(recfile, **handler_opts)
+        super().__init__(recfile, **opts)
 
     def __del__(self):
         if self._auto_delete and self._tmpdir and os.path.isdir(self._tmpdir):

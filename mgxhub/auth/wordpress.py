@@ -2,19 +2,22 @@
 
 # pylint: disable=import-error
 
-from hashlib import sha256
 from datetime import datetime
+from hashlib import sha256
 from urllib.parse import urljoin
-import urllib3
+
 import requests
-from requests.auth import HTTPBasicAuth
+import urllib3
 from fastapi import HTTPException
+from requests.auth import HTTPBasicAuth
+
 from mgxhub.config import cfg
 from mgxhub.logger import logger
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 LOGGED_IN_CACHE = {}
+
 
 class WPRestAPI:
     '''Communicate with WordPress REST API.'''
@@ -33,7 +36,7 @@ class WPRestAPI:
 
         self._username = username
         self._password = password
-        
+
         if not self._url or not self._username or not self._password:
             logger.warning('WordPress credentials are not set')
             self._creds_set = False
@@ -45,8 +48,8 @@ class WPRestAPI:
         '''Authenticate user with WordPress.'''
 
         if not self._creds_set:
-            return False
-        
+            return False, []
+
         params = {'context': 'edit'}
 
         response = requests.get(
@@ -60,7 +63,7 @@ class WPRestAPI:
         if response.status_code == 200:
             resp = response.json()
             if not isinstance(resp.get('roles'), list):
-                return False
+                return False, []
             if admin:
                 return 'administrator' in resp['roles'], resp.get('roles')
             return resp.get('name') == self._username, resp.get('roles')
@@ -70,7 +73,7 @@ class WPRestAPI:
 
     def need_user_login(self, hint: str = 'Need user authentication', need_admin: bool = False, brutal_term: bool = True) -> bool:
         '''Check if user needs to login to WordPress.
-        
+
         Args:
             hint: The hint message to be returned.
             admin: Whether to check if the user is an administrator.

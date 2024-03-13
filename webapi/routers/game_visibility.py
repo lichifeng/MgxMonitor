@@ -18,6 +18,9 @@ async def set_game_visibility(guid: str, lv: int = 0) -> dict:
     Defined in: `webapi/routers/game_visibility.py`
     '''
 
+    if lv not in [0, 1, 2]:
+        raise HTTPException(status_code=400, detail="Invalid visibility level. Must be 0, 1, or 2.")
+
     game = db().query(Game).filter(Game.game_guid == guid).first()
     if game:
         game.visibility = lv

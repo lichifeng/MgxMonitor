@@ -12,7 +12,7 @@ async def get_rating_meta() -> dict:
 
     Used in ratings page to show the number of ratings for each version.
 
-    Defined in: `mgxhub/handler/db_handler.py`
+    Defined in: `webapi/routers/rating_stats.py`
     '''
 
     stats = get_rating_stats()

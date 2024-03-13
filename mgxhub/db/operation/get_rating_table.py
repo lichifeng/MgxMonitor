@@ -19,7 +19,7 @@ def get_rating_table(
         matchup: Matchup of the game.
         page_size: page size of the result.
 
-    Defined in: `mgxhub/handler/db_handler.py`
+    Defined in: `mgxhub/db/operation/get_rating_table.py`
     '''
 
     matchup_value = '1v1' if matchup.lower() == '1v1' else 'team'

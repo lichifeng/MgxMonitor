@@ -11,7 +11,7 @@ from webapi.admin_api import admin_api
 @admin_api.get("/system/config/default", response_class=PlainTextResponse)
 async def download_default_config() -> str:
     '''Download default configuration file
-    
+
     Defined in: `webapi/routers/download_default_config.py`
     '''
 

@@ -27,6 +27,6 @@ async def search_player_by_name(
     '''
 
     result = search_players_by_name(player_name, stype, orderby, page, page_size)
-
     current_time = datetime.now().isoformat()
+
     return {'players': result, 'generated_at': current_time}

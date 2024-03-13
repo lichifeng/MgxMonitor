@@ -34,4 +34,4 @@ class TmpCleaner:
         for tmpdir in os.listdir(TEMPDIR_DIR):
             if tmpdir.startswith(TMPDIR_PREFIX):
                 shutil.rmtree(os.path.join(TEMPDIR_DIR, tmpdir))
-                logger.warning(f"Purged tmp directory forcedly: {tmpdir}")
+                logger.warning(f"Purged tmp directory by force: {tmpdir}")

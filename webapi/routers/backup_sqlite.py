@@ -13,7 +13,7 @@ from webapi.admin_api import admin_api
 @admin_api.get("/system/backup/sqlite")
 async def backup_sqlite(background_tasks: BackgroundTasks) -> dict:
     '''Backup SQLite3 database
-    
+
     Defined in: `webapi/routers/backup_sqlite.py`
     '''
 

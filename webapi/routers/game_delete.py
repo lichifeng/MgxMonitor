@@ -28,4 +28,4 @@ async def delete_game(guid: str) -> dict:
         logger.info(f"[DB] Delete: {guid}")
         return JSONResponse(status_code=200, content={"detail": f"Game [{guid}] deleted"})
 
-    raise HTTPException(status_code=500, detail=f"Failed to delete game [{guid}]")
+    raise HTTPException(status_code=404, detail=f"Game not exists: [{guid}]")

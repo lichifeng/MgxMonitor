@@ -10,7 +10,7 @@ def get_rating_stats() -> list:
 
     Used in ratings page to show the number of ratings for each version.
 
-    Defined in: `mgxhub/handler/db_handler.py`
+    Defined in: `mgxhub/db/operation/get_rating_stats.py`
     '''
 
     query = text("""

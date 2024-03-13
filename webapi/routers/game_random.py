@@ -2,14 +2,18 @@
 
 from datetime import datetime
 
-from sqlalchemy import text
+from fastapi import Query
+from sqlalchemy import func
 
 from mgxhub import db
+from mgxhub.model.orm import Game
 from webapi import app
+
+# pylint: disable=E1102
 
 
 @app.get("/game/random")
-async def fetch_rand_games(threshold: int = 10, limit: int = 50) -> dict:
+async def fetch_rand_games(threshold: int = Query(10, gt=0), limit: int = Query(50, gt=0)) -> dict:
     '''Fetch random games
 
     - **threshold**: Minimum duration of the game, in minutes. Default is 10.
@@ -18,16 +22,17 @@ async def fetch_rand_games(threshold: int = 10, limit: int = 50) -> dict:
     Defined in: `webapi/routers/game_random.py`
     '''
 
-    query = text("""
-        SELECT 
-            game_guid, version_code, created, map_name, matchup, duration, speed 
-        FROM games 
-        WHERE duration > :threshold 
-        ORDER BY RANDOM()
-        LIMIT :limit;
-    """)
+    result = db().query(
+        Game.game_guid, Game.version_code,
+        Game.created, Game.map_name, Game.matchup,
+        Game.duration, Game.speed
+    ).filter(
+        Game.duration > threshold * 60
+    ).order_by(
+        func.random()
+    ).limit(limit).all()
 
-    result = db().execute(query, {'threshold': threshold * 60, 'limit': limit})
-    games = [list(row) for row in result.fetchall()]
+    games = [list(row) for row in result]
     current_time = datetime.now().isoformat()
+
     return {'games': games, 'generated_at': current_time}

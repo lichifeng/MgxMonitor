@@ -9,11 +9,11 @@ from webapi import app
 @app.get("/system/langcodes")
 async def get_langcodes() -> dict[str, list]:
     '''Get available language codes and their names
-    
+
     Defined in: `webapi/routers/get_langcodes.py`
     '''
 
-    # Scan `translations/` directory for .po files to get available language codes
+    # Scan `translations/en/LC_MESSAGES/` directory for .mo files to get available language codes
     lang_codes = []
     for file in os.listdir(cfg.get('system', 'langdir')):
         if file.endswith('.mo'):
