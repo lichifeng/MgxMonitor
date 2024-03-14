@@ -22,7 +22,6 @@ class DefaultConfig:
             'workdir': os.path.join(self.project_root(), '__workdir'),  # suppose read-only
             'projectroot': self.project_root()  # suppose read-only
         }
-        self.config['system']['mapdir'] = os.path.join(self.config['system']['workdir'], 'map')
         self.config['system']['logdir'] = os.path.join(self.config['system']['workdir'], 'log')
         self.config['system']['uploaddir'] = os.path.join(self.config['system']['workdir'], 'upload')
         self.config['system']['backupdir'] = os.path.join(self.config['system']['workdir'], 'backup')
@@ -32,6 +31,11 @@ class DefaultConfig:
         self.config['system']['langdir'] = os.path.join(self.project_root(), 'translations/en/LC_MESSAGES')
         self.config['system']['loglevel'] = 'DEBUG'
         self.config['system']['logdest'] = 'console'  # if not 'console', will try to use log file
+        self.config['system']['authtype'] = 'none'  # currently only 'none' is used
+
+        # Map configuration
+        self.config['system']['mapdir'] = os.path.join(self.config['system']['workdir'], 'map')
+        self.config['system']['mapdirS3'] = '/maps/'
 
         # Database configuration
         self.config['database'] = {}

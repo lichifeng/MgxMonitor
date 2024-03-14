@@ -4,11 +4,10 @@
 
 # pylint: disable=R0903
 
-from sqlalchemy import Column, Integer, String, \
-    DateTime, Boolean, SmallInteger, Text, Index, \
-    JSON, DECIMAL, Float, ForeignKey, func, UniqueConstraint
-from sqlalchemy.orm import relationship
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import (DECIMAL, JSON, Boolean, Column, DateTime, Float,
+                        ForeignKey, Index, Integer, SmallInteger, String, Text,
+                        UniqueConstraint, func)
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 
 class Base(DeclarativeBase):  # pylint: disable=missing-class-docstring
@@ -90,8 +89,6 @@ class Player(Base):
     game = relationship('Game', back_populates='players')
     files = relationship('File', back_populates='recorder',
                          primaryjoin='Player.slot == foreign(File.recorder_slot) and Player.game_guid == File.game_guid')
-    # chat = relationship('Chat', back_populates='recorder',
-    #                     primaryjoin='Player.slot == foreign(Chat.recorder_slot) and Player.game_guid == Chat.game_guid')
 
     idx_name_game_guid = Index('idx_name_game_guid', name, game_guid)
 
@@ -160,8 +157,6 @@ class Chat(Base):
     chat_content = Column(Text)
 
     game = relationship('Game', back_populates='chats')
-    # recorder = relationship('Player', back_populates='chat',
-    #                         primaryjoin='foreign(Chat.recorder_slot) == Player.slot and Chat.game_guid == Player.game_guid')
 
     idx_chat_time_content = Index('idx_chat_time_content', 'chat_time', 'chat_content')
 

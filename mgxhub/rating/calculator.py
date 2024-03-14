@@ -5,14 +5,16 @@ python -m mgxhub.rating
 ```
 '''
 
-from numbers import Number
 import math
+from numbers import Number
 from statistics import fmean
-from sqlalchemy.orm import Session, Query
+
+from sqlalchemy import and_, text, update
 from sqlalchemy.exc import OperationalError
-from sqlalchemy import text, and_, update
-from mgxhub.model.orm import Rating, Player, Game
+from sqlalchemy.orm import Query, Session
+
 from mgxhub.logger import logger
+from mgxhub.model.orm import Game, Player, Rating
 
 
 class EloCalculator:

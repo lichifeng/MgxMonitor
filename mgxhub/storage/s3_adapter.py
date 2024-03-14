@@ -14,14 +14,15 @@ class S3Adapter:
     '''A representation of a S3 compatible server connection
 
     endpoint, access_key, secret_key, bucket_name are the required to connect to
-    the server, can be passed as arguments or as environment variables. If not
-    provided, a ValueError will be raised.
+    the server. If not provided, a ValueError will be raised.
 
     Args:
         endpoint (str): The server endpoint
-        access_key (str): The access key to the server
-        secret_key (str): The secret key to the server
-        bucket_name (str): The bucket name to be used
+        accesskey (str): The access key
+        secretkey (str): The secret key
+        region (str): The server region
+        bucket (str): The bucket name
+        secure (str): The secure connection status
     '''
 
     _endpoint: str = None
@@ -115,12 +116,19 @@ class S3Adapter:
         except Exception as e:
             return False
 
-    def upload(self, source_file: str | IOBase, dest_file: str, metadata: dict | None = None) -> ObjectWriteResult:
+    def upload(
+            self,
+            source_file: str | IOBase,
+            dest_file: str,
+            metadata: dict | None = None,
+            content_type: str = 'application/octet-stream'
+    ) -> ObjectWriteResult:
         '''Upload a file to the server.
 
         Args:
             source_file (str | IOBase): The source file path or an IOBase object representing the file
             dest_file (str): The destination file path
+            metadata (dict): The metadata to be attached to the file
 
         Returns:
             ObjectWriteResult: The result of the upload
@@ -128,15 +136,19 @@ class S3Adapter:
 
         if isinstance(source_file, str):
             return self._client.fput_object(
-                self._bucket, dest_file, source_file, metadata=metadata
+                self._bucket,
+                dest_file, source_file,
+                metadata=metadata, content_type=content_type
             )
-        else:
-            source_file.seek(0, os.SEEK_END)
-            size = source_file.tell()
-            source_file.seek(0)
-            return self._client.put_object(
-                self._bucket, dest_file, source_file, length=size, metadata=metadata
-            )
+
+        source_file.seek(0, os.SEEK_END)
+        size = source_file.tell()
+        source_file.seek(0)
+        return self._client.put_object(
+            self._bucket,
+            dest_file, source_file, length=size,
+            metadata=metadata, content_type=content_type
+        )
 
     def remove_object(self, file_path: str) -> None:
         '''Remove a file from the server.

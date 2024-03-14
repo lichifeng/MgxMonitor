@@ -1,9 +1,10 @@
 '''Logger'''
 
-import os
 import json
 import logging
+import os
 from logging.handlers import TimedRotatingFileHandler
+
 from mgxhub.config import Config
 
 

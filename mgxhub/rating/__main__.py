@@ -1,13 +1,16 @@
 '''Standalone xecutable of elo rating calculator.'''
 
+import argparse
 import os
 import sys
 import time
-import argparse
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+
 from mgxhub.config import cfg
 from mgxhub.logger import logger
+
 from . import EloCalculator
 
 
@@ -42,10 +45,12 @@ def main(db_path: str, duration_threshold: str, batch_size: str):
         engine = create_engine(f"sqlite:///{db_path}", echo=False)
         session = Session(engine)
         elo = EloCalculator(session)
-        elo.update_ratings(
-            duration_threshold=int(duration_threshold),
-            batch_size=int(batch_size)
-        )
+        duration_threshold = int(duration_threshold)
+        batch_size = int(batch_size)
+        if duration_threshold > 0 and batch_size > 50000:
+            elo.update_ratings(duration_threshold, batch_size)
+        else:
+            elo.update_ratings(15 * 60 * 1000, 150000)
         session.close()
         engine.dispose()
     finally:

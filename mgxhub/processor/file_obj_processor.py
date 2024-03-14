@@ -38,7 +38,7 @@ class FileObjProcessor(FileProcessor):
 
         # Get valid file last modified time
         try:
-            lastmod_obj = datetime.fromisoformat(lastmod)
+            lastmod_obj = datetime.fromisoformat(lastmod)  # This may raise ValueError, too
             if lastmod_obj > datetime.now() or lastmod_obj < datetime(1999, 3, 30):
                 raise ValueError
         except ValueError:

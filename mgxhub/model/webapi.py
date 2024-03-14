@@ -2,8 +2,10 @@
 
 import gettext
 from datetime import datetime
+
 from pydantic import BaseModel
-from mgxhub.model.orm import Game, Player, File, Chat
+
+from mgxhub.model.orm import Chat, File, Game, Player
 
 
 class RecordFile(BaseModel):
@@ -161,5 +163,4 @@ class GameDetail(BaseModel):
                     notes=file.notes
                 ))
 
-        self.chats = [ChatEntry(
-            sent_time=chat.chat_time, content=chat.chat_content) for chat in c]
+        self.chats = [ChatEntry(sent_time=chat.chat_time, content=chat.chat_content) for chat in c]

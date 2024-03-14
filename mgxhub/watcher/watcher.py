@@ -17,9 +17,9 @@ class RecordWatcher:
         os.makedirs(self.work_dir, exist_ok=True)
 
         if self.work_dir and os.path.isdir(self.work_dir):
-            logger.info(f"[Watcher] Monitoring directory: {self.work_dir}")
             self.thread = threading.Thread(target=self._watch, daemon=True)
             self.thread.start()
+            logger.info(f"[Watcher] Monitoring directory: {self.work_dir}")
 
     def _watch(self):
         '''Watch the work directory for new files and process them'''

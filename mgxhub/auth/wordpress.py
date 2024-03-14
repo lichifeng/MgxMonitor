@@ -38,7 +38,8 @@ class WPRestAPI:
         self._password = password
 
         if not self._url or not self._username or not self._password:
-            logger.warning('WordPress credentials are not set')
+            if cfg.get('system', 'authtype') != 'none':
+                logger.warning('WordPress credentials are not set')
             self._creds_set = False
             return
 
@@ -46,6 +47,9 @@ class WPRestAPI:
 
     def authenticate(self, admin: bool = False) -> tuple[bool, list]:
         '''Authenticate user with WordPress.'''
+
+        if cfg.get('system', 'authtype') == 'none':
+            return True, ['administrator']
 
         if not self._creds_set:
             return False, []

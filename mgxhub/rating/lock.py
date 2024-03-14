@@ -1,10 +1,11 @@
 '''Used to operate lock file for rating calculation process'''
 
 import os
-import time
-import sys
-import subprocess
 import signal
+import subprocess
+import sys
+import time
+
 from mgxhub.config import cfg
 
 

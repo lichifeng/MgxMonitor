@@ -219,6 +219,8 @@ class FileProcessor:
             try:
                 # raise Exception('Test error')
                 tasks.append(self._save_to_s3(record_path, parsed_result))
+                if 'map' in parsed_result and 'base64' in parsed_result['map']:
+                    tasks.append(self._save_map_s3(parsed_result['guid'], parsed_result['map']['base64']))
             except Exception as e:
                 logger.error(f'_save_to_s3 error: {e}')
                 self._move_to_error(record_path)
@@ -424,6 +426,35 @@ Packed at {current_time}
         except Exception as e:
             logger.error(f'_save_map error: {e}, basename(guid): {basename}, current file: {self._current_file}')
             return 'MAP_SAVE_ERROR'
+
+    async def _save_map_s3(self, basename: str, base64_str: str) -> str:
+        '''Save the map image to the S3 bucket.
+
+        Args:
+            basename (str): The basename of the record file.
+            base64_str (str): The base64 string of the map image.
+
+        Returns:
+            str: The result of the saving.
+        '''
+
+        if not self._s3_conn:
+            return 'OSS_CONN_NOT_SET'
+
+        try:
+            img = Image.open(BytesIO(base64.b64decode(base64_str)))
+            buf = BytesIO()
+            img.save(buf, format='PNG')
+            buf.seek(0)
+            result = self._s3_conn.upload(
+                buf, cfg.get('system', 'mapdirS3') + basename + '.png',
+                content_type='image/png'
+            )
+            logger.debug(f'Map uploaded: {result.object_name}')
+            return 'OSS_MAP_UPLOAD_SUCCESS'
+        except Exception as e:
+            logger.error(f'_save_map_s3 error: {e}')
+            return 'OSS_MAP_UPLOAD_ERROR'
 
     def _move_to_error(self, file_path: str, copy: bool = False) -> str:
         '''Move the file to the error directory.
