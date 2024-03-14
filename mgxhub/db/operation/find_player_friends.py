@@ -1,8 +1,11 @@
 '''Find players who played with the given player most.'''
 
-from sqlalchemy import text
+from sqlalchemy import alias, desc, func
 
 from mgxhub import db
+from mgxhub.model.orm import Player
+
+# pylint: disable=not-callable
 
 
 def get_close_friends(name_hash: str, limit: int = 100) -> list:
@@ -15,25 +18,28 @@ def get_close_friends(name_hash: str, limit: int = 100) -> list:
     Defined in: `mgxhub/db/operation/find_player_friends.py`
     '''
 
-    query = text("""
-        SELECT 
-            p2.name, 
-            COUNT(*) AS common_games_count
-        FROM 
-            players p1
-        JOIN 
-            players p2 ON p1.game_guid = p2.game_guid
-        WHERE 
-            p1.name_hash = :name_hash AND p1.name != p2.name
-        GROUP BY 
-            p2.name
-        ORDER BY 
-            common_games_count DESC
-        LIMIT :limit;
-    """)
+    Friend = alias(Player, name='p2')
 
-    result = db().execute(query, {'name_hash': name_hash, 'limit': limit})
-    return [list(row) for row in result.fetchall()]
+    query = (
+        db().query(
+            Friend.c.name,
+            func.count('*').label('common_games_count')
+        )
+        .select_from(Player)
+        .join(
+            Friend, Player.game_guid == Friend.c.game_guid
+        )
+        .filter(
+            Player.name_hash == name_hash,
+            Player.name != Friend.c.name
+        )
+        .group_by(Friend.c.name)
+        .order_by(desc('common_games_count'))
+        .limit(limit)
+    )
+
+    result = query.all()
+    return [[row.name, row.common_games_count] for row in result]
 
 
 async def async_get_close_friends(name_hash: str, limit: int = 100) -> list:

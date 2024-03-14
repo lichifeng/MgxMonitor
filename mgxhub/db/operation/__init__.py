@@ -8,7 +8,7 @@ from .get_player_rating_stats import (async_get_player_rating_stats,
                                       get_player_rating_stats)
 from .get_player_recent_games import (async_get_player_recent_games,
                                       get_player_recent_games)
-from .get_rating_stats import async_get_rating_stats, get_rating_stats
+from .get_rating_stats import get_rating_stats
 from .get_rating_table import get_rating_table
 from .search_games import search_games
 from .search_player_name import search_players_by_name

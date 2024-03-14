@@ -56,4 +56,4 @@ class SQLite3(metaclass=Singleton):
                                         echo=(cfg.get('system', 'loglevel').upper() == 'DEBUG'))
         Base.metadata.create_all(self._db_engine)
         self._db_session = Session(self._db_engine)
-        logger.debug(f"SQLite loaded: {self._db_path}")  # Watcher thread will print this, too.
+        logger.debug(f"SQLite loaded: {self._db_path}")

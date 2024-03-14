@@ -1,8 +1,9 @@
 '''Get rating stats of a player'''
 
-from sqlalchemy import text
-
 from mgxhub import db
+from mgxhub.model.orm import Rating
+
+# pylint: disable=not-callable
 
 
 def get_player_rating_stats(name_hash: str) -> list:
@@ -14,21 +15,17 @@ def get_player_rating_stats(name_hash: str) -> list:
     Defined in: `mgxhub/db/operation/get_player_rating_stats.py`
     '''
 
-    query = text("""
-        SELECT 
-            name, name_hash, version_code, matchup, \
-            rating, wins, total, streak, streak_max, \
-            highest, lowest, first_played, last_played
-        FROM 
-            ratings
-        WHERE 
-            name_hash = :name_hash
-        GROUP BY 
-            version_code, matchup;
-    """)
+    result = db().query(
+        Rating.name, Rating.name_hash, Rating.version_code, Rating.matchup,
+        Rating.rating, Rating.wins, Rating.total, Rating.streak, Rating.streak_max,
+        Rating.highest, Rating.lowest, Rating.first_played, Rating.last_played
+    ).filter(
+        Rating.name_hash == name_hash
+    ).group_by(
+        Rating.version_code, Rating.matchup
+    ).all()
 
-    result = db().execute(query, {'name_hash': name_hash})
-    return [tuple(row) for row in result.fetchall()]
+    return [tuple(row) for row in result]
 
 
 async def async_get_player_rating_stats(name_hash: str) -> list:

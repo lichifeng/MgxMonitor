@@ -10,7 +10,7 @@ from webapi import app
 async def search_player_by_name(
     player_name: str,
     stype: str = 'std',
-    orderby: str = 'nagd',
+    orderby: str = 'nad',
     page: int = 0,
     page_size: int = 100
 ) -> dict:

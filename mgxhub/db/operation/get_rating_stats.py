@@ -1,8 +1,11 @@
 '''Get rating statistics of different versions'''
 
-from sqlalchemy import text
+from sqlalchemy import desc, func
 
 from mgxhub import db
+from mgxhub.model.orm import Rating
+
+# pylint: disable=not-callable
 
 
 def get_rating_stats() -> list:
@@ -13,18 +16,15 @@ def get_rating_stats() -> list:
     Defined in: `mgxhub/db/operation/get_rating_stats.py`
     '''
 
-    query = text("""
-            SELECT version_code, COUNT(*) as count
-            FROM ratings
-            GROUP BY version_code
-            ORDER BY count DESC;
-        """)
+    count = func.count(Rating.version_code).label('count')
 
-    result = db().execute(query)
-    return [tuple(row) for row in result.fetchall()]
+    result = db().query(
+        Rating.version_code,
+        count
+    ).group_by(
+        Rating.version_code
+    ).order_by(
+        desc(count)
+    ).all()
 
-
-async def async_get_rating_stats() -> list:
-    '''Async version of fetch_rating_meta()'''
-
-    return get_rating_stats()
+    return [tuple(row) for row in result]

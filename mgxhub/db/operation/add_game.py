@@ -37,7 +37,7 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
     Args:
         d: Game data from the parser.
         t: Time of the game played. Normall last modified time of the actually record file in ISO format.
-        source: Source of the record file. User uploaded from web, or from the bot, etc.
+        source: Source of the record file. User uploaded from web, or from the bot, etc. TODO: Not used yet.
 
     Returns:
         A tuple of two strings. The first string is the status of the operation, which is one of "exists", "invalid", "success". The second string is the GUID of the game. 
@@ -69,6 +69,8 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
             game.game_time = game_time
             update_gametime = True
 
+        # Even if the game exists, updating the game time still makes sense.
+        # Longer records may had lost the original creation time while short ones not.
         if game.duration > d.get('duration'):
             if update_gametime:
                 _update_gametime(game, game_time)

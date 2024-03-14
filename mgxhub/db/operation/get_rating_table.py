@@ -1,8 +1,11 @@
 '''Get rating table'''
 
-from sqlalchemy import text
+from sqlalchemy import asc, desc, func
 
 from mgxhub import db
+from mgxhub.model.orm import Rating
+
+# pylint: disable=not-callable
 
 
 def get_rating_table(
@@ -23,37 +26,32 @@ def get_rating_table(
     '''
 
     matchup_value = '1v1' if matchup.lower() == '1v1' else 'team'
-    order_method = 'DESC' if order.lower() == 'desc' else 'ASC'
+    order_method = desc if order.lower() == 'desc' else asc
     if page < 0 or page_size < 1:
         return []
 
-    sql = text(f"""
-        SELECT ROW_NUMBER() OVER (ORDER BY rating {order_method}) AS rownum,
-            name,
-            name_hash,
-            rating,
-            total,
-            wins,
-            streak,
-            streak_max,
-            highest,
-            lowest,
-            first_played,
-            last_played
-        FROM ratings
-        WHERE version_code = :version_code AND matchup = :matchup_value
-        ORDER BY rating {order_method}
-        LIMIT :page_size
-        OFFSET :page;
-    """)
+    ratings = db().query(
+        func.row_number().over(order_by=order_method(Rating.rating)).label('rownum'),
+        Rating.name,
+        Rating.name_hash,
+        Rating.rating,
+        Rating.total,
+        Rating.wins,
+        Rating.streak,
+        Rating.streak_max,
+        Rating.highest,
+        Rating.lowest,
+        Rating.first_played,
+        Rating.last_played
+    ).filter(
+        Rating.version_code == version_code,
+        Rating.matchup == matchup_value
+    ).order_by(
+        order_method(Rating.rating)
+    ).limit(
+        page_size
+    ).offset(
+        page * page_size
+    ).all()
 
-    ratings = db().execute(
-        sql,
-        {
-            "version_code": version_code,
-            "matchup_value": matchup_value,
-            "page_size": page_size,
-            "page": page * page_size
-        }
-    ).fetchall()
     return [list(row) for row in ratings]

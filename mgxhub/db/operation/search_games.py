@@ -2,9 +2,10 @@
 
 from datetime import datetime
 
-from sqlalchemy import text
+from sqlalchemy import desc
 
 from mgxhub import db
+from mgxhub.model.orm import Game
 from mgxhub.model.searchcriteria import SearchCriteria
 
 
@@ -24,66 +25,67 @@ def search_games(criteria: SearchCriteria) -> dict:
     Defined in: `mgxhub/model/searchresult.py`
     '''
 
-    where_clause = []
+    query = db().query(Game)
+
     if criteria.game_guid and len(criteria.game_guid) == 32:
-        where_clause.append(f"game_guid = '{criteria.game_guid}'")
+        query = query.filter(Game.game_guid == criteria.game_guid)
     else:
         if criteria.duration_min:
-            where_clause.append(f"duration >= {criteria.duration_min}")
+            query = query.filter(Game.duration >= criteria.duration_min)
         if criteria.duration_max:
-            where_clause.append(f"duration <= {criteria.duration_max}")
+            query = query.filter(Game.duration <= criteria.duration_max)
         if criteria.include_ai is not None:
-            where_clause.append(f"include_ai = {criteria.include_ai}")
+            query = query.filter(Game.include_ai == criteria.include_ai)
         if criteria.is_multiplayer is not None:
-            where_clause.append(f"is_multiplayer = {criteria.is_multiplayer}")
+            query = query.filter(Game.is_multiplayer == criteria.is_multiplayer)
         if criteria.population_min:
-            where_clause.append(f"population >= {criteria.population_min}")
+            query = query.filter(Game.population >= criteria.population_min)
         if criteria.population_max:
-            where_clause.append(f"population <= {criteria.population_max}")
+            query = query.filter(Game.population <= criteria.population_max)
         if criteria.instruction:
-            where_clause.append(f"instruction LIKE '%{criteria.instruction}%'")
+            query = query.filter(Game.instruction.like(f"%{criteria.instruction}%"))
         if criteria.gametime_min:
-            where_clause.append(f"game_time >= '{criteria.gametime_min * 60}'")
+            query = query.filter(Game.game_time >= criteria.gametime_min * 60)
         if criteria.gametime_max:
-            where_clause.append(f"game_time <= '{criteria.gametime_max * 60}'")
+            query = query.filter(Game.game_time <= criteria.gametime_max * 60)
         if criteria.map_name:
-            where_clause.append(f"map_name LIKE '%{criteria.map_name}%'")
+            query = query.filter(Game.map_name.like(f"%{criteria.map_name}%"))
         if isinstance(criteria.speed, list) and len(criteria.speed) > 0:
-            speed_values = ', '.join(f"'{item}'" for item in criteria.speed)
-            where_clause.append(f"speed IN ({speed_values})")
+            query = query.filter(Game.speed.in_(criteria.speed))
         if isinstance(criteria.victory_type, list) and len(criteria.victory_type) > 0:
-            victory_type_values = ', '.join(f"'{item}'" for item in criteria.victory_type)
-            where_clause.append(f"victory_type IN ({victory_type_values})")
+            query = query.filter(Game.victory_type.in_(criteria.victory_type))
         if isinstance(criteria.version_code, list) and len(criteria.version_code) > 0:
-            version_code_values = ', '.join(f"'{item}'" for item in criteria.version_code)
-            where_clause.append(f"version_code IN ({version_code_values.upper()})")
+            query = query.filter(Game.version_code.in_(criteria.version_code))
         if isinstance(criteria.matchup, list) and len(criteria.matchup) > 0:
-            matchup_values = ', '.join(f"'{item}'" for item in criteria.matchup)
-            where_clause.append(f"matchup IN ({matchup_values})")
+            query = query.filter(Game.matchup.in_(criteria.matchup))
         if isinstance(criteria.map_size, list) and len(criteria.map_size) > 0:
-            map_size_values = ', '.join(f"'{item}'" for item in criteria.map_size)
-            where_clause.append(f"map_size IN ({map_size_values})")
-
-    where_clause = " AND ".join(where_clause)
-    if where_clause:
-        where_clause = f"WHERE {where_clause}"
+            query = query.filter(Game.map_size.in_(criteria.map_size))
 
     if criteria.order_by in ['created', 'duration', 'game_time']:
-        order_by = criteria.order_by
+        order_by = getattr(Game, criteria.order_by)
     else:
-        order_by = 'game_time'
+        order_by = Game.game_time
     if criteria.order_desc:
-        order_by += " DESC"
+        order_by = desc(order_by)
 
-    query = text(f"""
-        SELECT *
-        FROM games
-        {where_clause}
-        ORDER BY {order_by}
-        LIMIT {criteria.page_size}
-        OFFSET {criteria.page * criteria.page_size};
-    """)
-    result = db().execute(query)
-    games = [list(row) for row in result.fetchall()]
+    query = query.order_by(order_by).limit(criteria.page_size).offset(criteria.page * criteria.page_size)
+
+    games = [{
+        'game_guid': game.game_guid,
+        'version_code': game.version_code,
+        'map_name': game.map_name,
+        'matchup': game.matchup,
+        'duration': game.duration,
+        'game_time': game.game_time,
+        'population': game.population,
+        'include_ai': game.include_ai,
+        'is_multiplayer': game.is_multiplayer,
+        'speed': game.speed,
+        'victory_type': game.victory_type,
+        'map_size': game.map_size,
+        'instruction': game.instruction,
+        'players': [(player.name, player.civ_name) for player in game.players]
+    } for game in query.all()]
     current_time = datetime.now().isoformat()
+
     return {'games': games, 'generated_at': current_time}

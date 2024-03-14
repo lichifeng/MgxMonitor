@@ -1,15 +1,18 @@
 '''Search players by name.'''
 
-from sqlalchemy import text
+from sqlalchemy import asc, desc, func
 
 from mgxhub import db
+from mgxhub.model.orm import Player
 from mgxhub.util import sanitize_playername
+
+# pylint: disable=not-callable
 
 
 def search_players_by_name(
     name: str,
     stype: str = 'std',
-    orderby: str = 'nagd',
+    orderby: str = 'nad',
     page: int = 0,
     page_size: int = 100
 ) -> list:
@@ -18,7 +21,7 @@ def search_players_by_name(
     Args:
         name: the name to search.
         stype: search type. 'std' for standard, 'prefix' for prefix, 'suffix' for suffix, 'exact' for exact match.
-        orderby: order by. 'nagd' for name asc, game_count desc, 'gdnd' for game_count desc, name desc, etc.
+        orderby: order by. 'nad' for name asc, game_count desc, 'gdd' for game_count desc, name desc, etc.
         page: page number.
         page_size: page size.
 
@@ -31,49 +34,47 @@ def search_players_by_name(
         return []
 
     order_parts = []
-    if len(orderby) < 4:
-        order_parts = ["LENGTH(name)", "game_count", "ASC", "DESC"]
+    game_count = func.count(Player.game_guid).label('game_count')
+    if len(orderby) < 3:
+        order_parts = [func.length(Player.name), game_count, asc, desc]
     else:
         if orderby[0].lower() == 'g':
-            order_parts.extend(["game_count", "LENGTH(name)"])
+            order_parts.extend([game_count, func.length(Player.name)])
         else:
-            order_parts.extend(["LENGTH(name)", "game_count"])
+            order_parts.extend([func.length(Player.name), game_count])
         if orderby[1].lower() == 'd':
-            order_parts.append("DESC")
+            order_parts.append(desc)
         else:
-            order_parts.append("ASC")
-        if orderby[3].lower() == 'd':
-            order_parts.append("DESC")
+            order_parts.append(asc)
+        if orderby[2].lower() == 'd':
+            order_parts.append(desc)
         else:
-            order_parts.append("ASC")
-    order_cmd = f"{order_parts[0]} {order_parts[2]}, {order_parts[1]} {order_parts[3]}"
+            order_parts.append(asc)
 
-    sql = text(f"""
-        SELECT name, name_hash, COUNT(game_guid) AS game_count
-        FROM players
-        WHERE name LIKE :name
-        GROUP BY name
-        ORDER BY {order_cmd}
-        LIMIT :page_size
-        OFFSET :page;
-    """)
+    query = db().query(
+        Player.name,
+        Player.name_hash,
+        game_count
+    ).group_by(
+        Player.name
+    )
 
     if stype == 'prefix':
-        name = f"{name}%"
+        query = query.filter(Player.name.like(f"{name}%"))
     elif stype == 'suffix':
-        name = f"%{name}"
+        query = query.filter(Player.name.like(f"%{name}"))
     elif stype == 'exact':
-        name = f"{name}"
+        query = query.filter(Player.name == name)
     else:
-        name = f"%{name}%"
+        query = query.filter(Player.name.like(f"%{name}%"))
 
-    players = db().execute(
-        sql,
-        {
-            "name": name,
-            "page_size": page_size,
-            "page": page * page_size
-        }
-    ).fetchall()
+    query = query.order_by(
+        order_parts[2](order_parts[0]),
+        order_parts[3](order_parts[1])
+    ).limit(
+        page_size
+    ).offset(
+        page * page_size
+    )
 
-    return [list(row) for row in players]
+    return [list(row) for row in query.all()]
