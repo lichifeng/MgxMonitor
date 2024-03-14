@@ -31,7 +31,7 @@ def get_player_rating_table(
 
     sql = text(f"""
         WITH rating_table AS (
-            SELECT ROW_NUMBER() OVER (ORDER BY rating {order_method}) AS rownum,
+            SELECT ROW_NUMBER() OVER (ORDER BY rating {order_method}, total DESC) AS rownum,
                 name,
                 name_hash,
                 rating,

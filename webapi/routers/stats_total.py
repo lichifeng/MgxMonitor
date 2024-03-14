@@ -1,15 +1,21 @@
 '''Get unique games/players count, new games this month'''
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from sqlalchemy import text
+from fastapi import BackgroundTasks
+from sqlalchemy import func, literal_column, select, union_all
 
 from mgxhub import db
+from mgxhub.model.orm import Game, Player
 from webapi import app
 
+# pylint: disable=global-statement
+# pylint: disable=not-callable
 
-@app.get("/stats/total")
-async def get_total_stats() -> dict:
+STATS_CACHE = {'cached': None, 'timestamp': 0}
+
+
+def _get_total_stats() -> dict:
     '''Get unique games/players count, new games this month
 
     Returns:
@@ -18,19 +24,45 @@ async def get_total_stats() -> dict:
     Defined in: `mgxhub/db/operation/stats_index.py`
     '''
 
-    query = text("""
-        SELECT 'unique_games', COUNT(DISTINCT game_guid) AS count FROM games
-        UNION ALL
-        SELECT 'unique_players', COUNT(DISTINCT name_hash) FROM players
-        UNION ALL
-        SELECT 'monthly_games', COUNT(*) FROM games WHERE strftime('%m', modified) = strftime('%m', datetime('now', '-1 month')) AND strftime('%Y', modified) = strftime('%Y', 'now')
-    """)
+    unique_games = select(
+        literal_column("'unique_games'").label('stat'),
+        func.count(Game.game_guid.distinct()))
+    unique_players = select(
+        literal_column("'unique_players'").label('stat'),
+        func.count(Player.name_hash.distinct()))
+
+    last_month = datetime.now() - timedelta(days=30)
+    monthly_games = select(
+        literal_column("'monthly_games'").label('stat'),
+        func.count(Game.id)).filter(
+            func.extract('month', Game.modified) == last_month.month,
+            func.extract('year', Game.modified) == last_month.year)
+
+    query = union_all(unique_games, unique_players, monthly_games)
 
     result = db().execute(query)
     results = result.fetchall()
     stats = dict(results)
-
-    # Add the current time to the stats
     stats['generated_at'] = datetime.now().isoformat()
 
+    STATS_CACHE['cached'] = stats
+    STATS_CACHE['timestamp'] = datetime.now()
     return stats
+
+
+@app.get("/stats/total")
+async def get_total_stats(background_tasks: BackgroundTasks) -> dict:
+    '''Get unique games/players count, new games this month
+
+    Returns:
+        A dictionary containing the stats.
+
+    Defined in: `mgxhub/db/operation/stats_index.py`
+    '''
+
+    if STATS_CACHE['cached']:
+        if (datetime.now() - STATS_CACHE['timestamp']).seconds > 60:
+            background_tasks.add_task(_get_total_stats)
+        return STATS_CACHE['cached']
+
+    return _get_total_stats()

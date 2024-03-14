@@ -14,7 +14,23 @@ async def player_rating_page(
     order: str = 'desc',
     page_size: int = 100
 ) -> dict:
-    '''Fetch rating of a player'''
+    '''Fetch rating of a player
+
+    Returns a list of following fields:
+    - name (str): Name of the player
+    - name_hash (str): Name hash of the player
+    - rating (float): Rating of the player
+    - total (int): Total games played by the player
+    - wins (int): Total wins of the player
+    - streak (int): Current streak of the player
+    - streak_max (int): Maximum streak of the player
+    - highest (float): Highest rating of the player
+    - lowest (float): Lowest rating of the player
+    - first_played (str): First played date of the player
+    - last_played (str): Last played date of the player
+
+    Defined in: `webapi/routers/rating_player_page.py`
+    '''
 
     ratingpage = get_player_rating_table(player_hash, version_code, matchup, order, page_size)
     current_time = datetime.now().isoformat()

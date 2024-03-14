@@ -4,14 +4,15 @@ from mgxhub.rating import RatingLock
 from webapi import app
 
 
-@app.get("/system/rating/status")
+@app.get("/rating/status")
 async def get_rating_status() -> dict:
     '''Get status of the rating calculation process
-    
+
     Defined in: `webapi/routers/rating_status.py`
     '''
 
     lock = RatingLock()
+
     return {
         "running": lock.rating_running(),
         "pid": lock.pid,
