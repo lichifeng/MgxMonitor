@@ -19,7 +19,7 @@ class DefaultConfig:
         parser_default = os.path.join(self.project_root(), 'mgxhub', 'parser', 'MgxParser_D_EXE')
         self.config['system'] = {
             'parser': parser_default,
-            'workdir': os.path.join(self.project_root(), '__workdir'),  # suppose read-only
+            'workdir': os.path.join(self.project_root(), '__workdir'),
             'projectroot': self.project_root()  # suppose read-only
         }
         self.config['system']['logdir'] = os.path.join(self.config['system']['workdir'], 'log')
