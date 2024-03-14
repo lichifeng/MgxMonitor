@@ -134,6 +134,8 @@ class FileProcessor:
             return {'status': 'success', 'message': 'directory was processed'}
 
         if self._current_extension in self.ACCEPTED_RECORD_TYPES:
+            # async here means the slow tasks like saving to db and s3 will be run in a new thread
+            # if a request is made by webapi, it will at least wait for the record to be parsed
             async_run = self._current_file == self._file_path
             logger.info(f'Process: {self._current_file}')
             return self._process_record(self._current_file, async_run=async_run, opts='-b')
@@ -301,7 +303,7 @@ class FileProcessor:
             self._process_directory(temp_dir)
             self._clean_file(zip_path)
 
-        return {'status': 'success', 'message': 'compressed file was scaduled for processing'}
+        return {'status': 'success', 'message': 'compressed file was processed'}
 
     async def _save_to_db(self, data: dict) -> tuple[str, str]:
         '''Save the parsed data to the database.

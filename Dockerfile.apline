@@ -1,21 +1,24 @@
-FROM node:lts-bookworm-slim as builder
+# Alpine Linux has some issues with rar extraction and also some other issues with some python packages
+# This Dockerfile was deprecated
+
+FROM node:20.11.1-alpine3.19 as builder
 
 WORKDIR /root
 
-RUN apt-get update && apt-get install -y git \
+RUN apk add --no-cache git \
     && git clone https://github.com/lichifeng/MgxParser.git
 
 WORKDIR /root/MgxParser
 
-RUN apt-get install -y \
-    build-essential \
+RUN apk add --no-cache \
+    alpine-sdk \
     cmake \
-    libpng-dev libssl-dev
+    libpng-dev openssl-dev
 RUN npm install
 RUN npx cmake-js rebuild --CDBUILD_STATIC=OFF -p $(nproc)
 
 
-FROM python:3.12.2-slim-bookworm
+FROM python:alpine3.19
 
 WORKDIR /mgxhub
 
@@ -23,15 +26,12 @@ COPY . .
 COPY --from=builder /root/MgxParser/build/Release/MgxParser_D_EXE /mgxhub/mgxhub/parser/
 COPY --from=builder /root/MgxParser/build/Release/libMgxParser_SHARED.so /mgxhub/mgxhub/parser/
 
-RUN <<EOF 
-echo "deb http://deb.debian.org/debian bookworm main non-free" > /etc/apt/sources.list
-apt-get update
-apt-get update --allow-releaseinfo-change
-apt-get install -y libpng16-16 openssl p7zip unrar
+RUN <<EOF
+apk update
+apk add --no-cache libpng openssl libstdc++ libgcc p7zip gcc python3-dev musl-dev linux-headers
 pip install --no-cache-dir -r requirements.txt
-apt-get autoremove -y
-apt-get clean
-rm -rf /var/lib/apt/lists/*
+apk del gcc python3-dev musl-dev linux-headers
+apk cache clean
 EOF
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
