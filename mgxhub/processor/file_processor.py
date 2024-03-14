@@ -223,7 +223,8 @@ class FileProcessor:
                 logger.error(f'_save_to_s3 error: {e}')
                 self._move_to_error(record_path)
         else:
-            self._clean_file(record_path)
+            self._move_to_error(record_path)
+            # self._clean_file(record_path)
 
         # Me:
         # 为什么我在对这个类单独测试时没有找到消息循环，但是通过fastapi调用的时候能找到？
@@ -381,7 +382,18 @@ Packed at {current_time}
                 z.comment = comment_template.encode('ASCII')
 
             try:
-                result = self._s3_conn.upload(temp_file, self.OSS_RECORD_DIR + data['md5'] + '.zip')
+                result = self._s3_conn.upload(
+                    temp_file,
+                    self.OSS_RECORD_DIR + data['md5'] + '.zip',
+                    metadata={
+                        'guid': data['guid'],
+                        'md5': data['md5'],
+                        'parser': data['parser'],
+                        'played_at': played_at,
+                        'version': version_code,
+                        'matchup': matchup
+                    }
+                )
                 logger.info(f'Uploaded: {result.object_name}')
                 self._clean_file(record_path)
                 return 'OSS_UPLOAD_SUCCESS'
@@ -413,7 +425,7 @@ Packed at {current_time}
             logger.error(f'_save_map error: {e}, basename(guid): {basename}, current file: {self._current_file}')
             return 'MAP_SAVE_ERROR'
 
-    def _move_to_error(self, file_path: str) -> str:
+    def _move_to_error(self, file_path: str, copy: bool = False) -> str:
         '''Move the file to the error directory.
 
         Args:
@@ -432,5 +444,9 @@ Packed at {current_time}
             file_exists = os.path.isfile(os.path.join(error_dir, new_file_name))
 
         new_file_path = os.path.join(error_dir, new_file_name)
-        shutil.move(file_path, new_file_path)
+        if copy:
+            shutil.copy2(file_path, new_file_path)
+        else:
+            shutil.move(file_path, new_file_path)
+
         return new_file_path

@@ -1,10 +1,12 @@
 '''Used to communicate with a S3 compatible server'''
 
-from io import IOBase, BytesIO
-import os
 import json
+import os
+from io import BytesIO, IOBase
+
 from minio import Minio
 from minio.helpers import ObjectWriteResult
+
 from mgxhub.logger import logger
 
 
@@ -22,11 +24,12 @@ class S3Adapter:
         bucket_name (str): The bucket name to be used
     '''
 
-    _endpoint = None
-    _accesskey = None
-    _secretkey = None
-    _region = None
-    _bucket = None
+    _endpoint: str = None
+    _accesskey: str = None
+    _secretkey: str = None
+    _region: str = None
+    _secure: bool = True
+    _bucket: str = None
     _virtual_host_style = False
     _client = None
 
@@ -36,7 +39,8 @@ class S3Adapter:
             accesskey: str = None,
             secretkey: str = None,
             region: str | None = None,
-            bucket: str | None = None
+            bucket: str | None = None,
+            secure: str = "on"
     ):
         '''Initialize the S3Adapter instance
 
@@ -49,6 +53,7 @@ class S3Adapter:
         self._secretkey = secretkey
         self._region = region
         self._bucket = bucket
+        self._secure = secure.lower() != "off"
 
         if not self._endpoint or not self._accesskey or not self._secretkey:
             raise ValueError('Missing S3 endpoint || access key || secret key')
@@ -56,7 +61,8 @@ class S3Adapter:
         self._client = Minio(self._endpoint,
                              access_key=self._accesskey,
                              secret_key=self._secretkey,
-                             region=self._region
+                             region=self._region,
+                             secure=self._secure
                              )
         self.set_bucket()
 
@@ -89,9 +95,9 @@ class S3Adapter:
 
         found = self._client.bucket_exists(self._bucket)
         if not found:
+            logger.warning(f'[S3] Creating bucket {self._bucket}')
             self._client.make_bucket(self._bucket)
-        self._client.set_bucket_policy(
-            self._bucket, json.dumps(_public_read_policy))
+        self._client.set_bucket_policy(self._bucket, json.dumps(_public_read_policy))
 
     def have(self, file_path: str) -> bool:
         '''Check if a file exists in the server.
@@ -109,7 +115,7 @@ class S3Adapter:
         except Exception as e:
             return False
 
-    def upload(self, source_file: str | IOBase, dest_file: str) -> ObjectWriteResult:
+    def upload(self, source_file: str | IOBase, dest_file: str, metadata: dict | None = None) -> ObjectWriteResult:
         '''Upload a file to the server.
 
         Args:
@@ -122,14 +128,14 @@ class S3Adapter:
 
         if isinstance(source_file, str):
             return self._client.fput_object(
-                self._bucket, dest_file, source_file,
+                self._bucket, dest_file, source_file, metadata=metadata
             )
         else:
             source_file.seek(0, os.SEEK_END)
             size = source_file.tell()
             source_file.seek(0)
             return self._client.put_object(
-                self._bucket, dest_file, source_file, length=size
+                self._bucket, dest_file, source_file, length=size, metadata=metadata
             )
 
     def remove_object(self, file_path: str) -> None:

@@ -23,8 +23,12 @@ COPY . .
 COPY --from=builder /root/MgxParser/build/Release/MgxParser_D_EXE /mgxhub/mgxhub/parser/
 COPY --from=builder /root/MgxParser/build/Release/libMgxParser_SHARED.so /mgxhub/mgxhub/parser/
 
-RUN apk update && apk add --no-cache libpng openssl libstdc++ libgcc p7zip
-
-RUN pip install --no-cache-dir -r requirements.txt
+RUN <<EOF
+apk update
+apk add --no-cache libpng openssl libstdc++ libgcc p7zip gcc python3-dev musl-dev linux-headers
+pip install --no-cache-dir -r requirements.txt
+apk del gcc python3-dev musl-dev linux-headers
+apk cache clean
+EOF
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]

@@ -1,5 +1,5 @@
-from .default import DefaultConfig
 from .config import Config
+from .default import DefaultConfig
 
 cfg = Config().config
 
@@ -9,5 +9,6 @@ cfg.s3 = {
     "accesskey": cfg.get('s3', 'accesskey'),
     "secretkey": cfg.get('s3', 'secretkey'),
     "region": cfg.get('s3', 'region'),
-    "bucket": cfg.get('s3', 'bucket')
+    "bucket": cfg.get('s3', 'bucket'),
+    "secure": cfg.get('s3', 'secure')
 }

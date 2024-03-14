@@ -14,7 +14,7 @@ from mgxhub.config import Config
 
 # Change this value to specify another test configuration file or modify options
 # in this one for testing
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'testconf.ini')
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'testconfig.ini')
 
 
 class TestWebAPIs(unittest.TestCase):
