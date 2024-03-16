@@ -29,9 +29,8 @@ class TmpCleaner:
 
     @staticmethod
     def purge_all_tmpdirs() -> None:
-        '''Purge all tmp directories created by mgxhub.'''
+        '''Purge all stuff in tmp directories'''
 
-        for tmpdir in os.listdir(TEMPDIR_DIR):
-            if tmpdir.startswith(TMPDIR_PREFIX):
-                shutil.rmtree(os.path.join(TEMPDIR_DIR, tmpdir))
-                logger.warning(f"Purged tmp directory by force: {tmpdir}")
+        shutil.rmtree(TEMPDIR_DIR)
+        os.makedirs(TEMPDIR_DIR)
+        logger.warning(f"Purged all tmp directories and files by force: {TEMPDIR_DIR}")

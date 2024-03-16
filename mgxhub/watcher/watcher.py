@@ -25,17 +25,29 @@ class RecordWatcher:
         '''Watch the work directory for new files and process them'''
 
         while True:
-            for filename in os.listdir(self.work_dir):
-                file_path = os.path.join(self.work_dir, filename)
-                logger.info(f"[Watcher] Found file: {file_path}")
-                file_processor = FileProcessor(file_path, delete_after=True)
-                try:
-                    file_processor.process()
-                    time.sleep(0.05)
-                except Exception as e:
-                    logger.error(f"[Watcher] Error processing file [{file_path}]: {e}")
-                    time.sleep(5)
-                    continue
-                else:
-                    logger.debug(f"[Watcher] Processed file [{file_path}]")
+            self._scan(self.work_dir)
             time.sleep(1)
+
+    def _scan(self, dirpath: str):
+        for root, dirs, files in os.walk(dirpath):
+            for filename in files:
+                file_path = os.path.join(root, filename)
+                try:
+                    file_processor = FileProcessor(file_path, syncproc=True, s3replace=False, cleanup=True)
+                except Exception as e:
+                    logger.error(f"[Watcher] Error [{file_path}]: {e}")
+                    # This exception may due to unfinished file writing, so we wait for a while
+                    time.sleep(3)
+                    return
+                logger.info(
+                    f"[Watcher] {file_path}: {file_processor.result().get('status', 'unknown')}")
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+            for inner_dir in dirs:
+                inner_path = os.path.join(root, inner_dir)
+                self._scan(inner_path)
+                if os.path.isdir(inner_path):
+                    try:
+                        os.rmdir(inner_path)
+                    except OSError:
+                        logger.warning(f'Try removing non-empty dir: {inner_dir}')

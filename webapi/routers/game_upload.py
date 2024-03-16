@@ -6,7 +6,7 @@ from fastapi import Depends, File, Form, UploadFile
 from fastapi.security import HTTPBasicCredentials
 
 from mgxhub.auth import WPRestAPI
-from mgxhub.processor import FileObjProcessor
+from mgxhub.processor import FileProcessor
 from webapi import app
 from webapi.authdepends import security
 
@@ -15,8 +15,8 @@ from webapi.authdepends import security
 async def upload_a_record(
     recfile: UploadFile = File(...),
     lastmod: str = Form(''),
-    force_replace: bool = Form(False),
-    delete_after: bool = Form(True),
+    s3replace: bool = Form(False),
+    cleanup: bool = Form(True),
     creds: HTTPBasicCredentials = Depends(security)
 ):
     '''Upload a record file to the server.
@@ -31,17 +31,18 @@ async def upload_a_record(
     Defined in: `webapi/routers/game_upload.py`
     '''
 
-    if force_replace and not WPRestAPI(creds.username, creds.password).need_admin_login(brutal_term=False):
-        force_replace = False
+    if s3replace and not WPRestAPI(creds.username, creds.password).need_admin_login(brutal_term=False):
+        s3replace = False
 
     if not lastmod:
         lastmod = datetime.now().isoformat()
-    uploaded = FileObjProcessor(
-        recfile.file, recfile.filename, lastmod,
-        {
-            "s3_replace": force_replace,
-            "delete_after": delete_after
-        }
+
+    processed = FileProcessor(
+        recfile.file,
+        syncproc=False,
+        s3replace=s3replace,
+        cleanup=cleanup,
+        buffermeta=[recfile.filename, lastmod]
     )
 
-    return uploaded.process()
+    return processed.result()

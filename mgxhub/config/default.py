@@ -32,6 +32,7 @@ class DefaultConfig:
         self.config['system']['loglevel'] = 'DEBUG'
         self.config['system']['logdest'] = 'console'  # if not 'console', will try to use log file
         self.config['system']['authtype'] = 'none'  # currently only 'none' is used
+        self.config['system']['echosql'] = 'off'  # 'on' or 'off'
 
         # Map configuration
         self.config['system']['mapdir'] = os.path.join(self.config['system']['workdir'], 'map')

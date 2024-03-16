@@ -36,11 +36,13 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
 
     Args:
         d: Game data from the parser.
-        t: Time of the game played. Normall last modified time of the actually record file in ISO format.
-        source: Source of the record file. User uploaded from web, or from the bot, etc. TODO: Not used yet.
+        t: Time of the game played. Normall last modified time of the actually record file in ISO format. 
+        source: Source of the record file. User uploaded from web, or from the bot, etc. 
 
     Returns:
-        A tuple of two strings. The first string is the status of the operation, which is one of "exists", "invalid", "success". The second string is the GUID of the game. 
+        A tuple of two strings. The first string is the status of the operation,
+        which is one of "exists", "invalid", "success", "duplicated", "updated".
+        The second string is the GUID of the game. 
 
     Defined in: `mgxhub/db/operation/add_game.py`
     '''

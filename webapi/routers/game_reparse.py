@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from mgxhub import cfg, db
 from mgxhub.model.orm import File
-from mgxhub.processor import FileObjProcessor
+from mgxhub.processor import FileProcessor
 from mgxhub.storage import S3Adapter
 from webapi.admin_api import admin_api
 
@@ -19,14 +19,13 @@ def _reparse(guid: str) -> None:
     for filemd5 in file_md5s:
         downloaded = oss.download(f"/records/{filemd5}.zip")
         if downloaded:
-            reparsed = FileObjProcessor(
-                downloaded, f"{filemd5}.mgx", datetime.now().isoformat(),
-                {
-                    "s3_replace": False,
-                    "delete_after": True
-                }
+            FileProcessor(
+                downloaded,
+                syncproc=True,
+                s3replace=False,
+                cleanup=True,
+                buffermeta=[f"{filemd5}.zip", datetime.now().isoformat()]
             )
-            reparsed.process()
 
 
 @admin_api.get("/game/reparse")
@@ -41,4 +40,5 @@ async def reparse_a_record(background_tasks: BackgroundTasks, guid: str) -> dict
     '''
 
     background_tasks.add_task(_reparse, guid)
+
     return JSONResponse(status_code=202, content={"detail": f"Reparse command sent for [{guid}]"})
