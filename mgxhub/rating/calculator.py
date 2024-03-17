@@ -9,7 +9,7 @@ import math
 from numbers import Number
 from statistics import fmean
 
-from sqlalchemy import and_, text, update
+from sqlalchemy import and_, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Query, Session
 
@@ -102,6 +102,13 @@ class EloCalculator:
                 p["streak"] = 0
                 self._change_buffer.append({"id": p["player_id"], "rating_change": delta_loser})
 
+    def _update_rating_change(self) -> None:
+        '''Update the rating change in the Player table.'''
+
+        self._session.bulk_update_mappings(Player, self._change_buffer)
+        self._session.commit()
+        self._change_buffer.clear()
+
     def _generate_rating_cache(self, duration_threshold: int = 15 * 60 * 1000, batch_size: int | None = None) -> None:
         '''Generate the ratings cache.'''
 
@@ -138,8 +145,7 @@ class EloCalculator:
                 # print(f"[{processed_count}] {self._current_game_guid}")
                 processed_count += 1
                 if processed_count % 10000 == 0:
-                    self._session.execute(update(Player), self._change_buffer)
-                    self._change_buffer.clear()
+                    self._update_rating_change()
 
                 # Reset the winners and losers for the next game
                 self._current_game_guid = game_guid
@@ -153,7 +159,6 @@ class EloCalculator:
             else:
                 col = self._rating_cache[version_code]['team']
 
-            # if still the same game, append to winners or losers
             if name_hash not in col:
                 col[name_hash] = {
                     "name": player_name,
@@ -170,14 +175,19 @@ class EloCalculator:
                 }
             else:
                 col[name_hash]["last_played"] = game_time
+                # Same player names of different games have different ids in
+                # players table, so player_id needs to be updated. It will be
+                # used in _update_game_ratings() by querying _winner_cache and
+                # _loser_cache
+                col[name_hash]["player_id"] = player_id
 
-            # if still same game, append to winners or losers
             if is_winner:
                 self._winners_cache.append((name_hash, col[name_hash]))
             else:
                 self._losers_cache.append((name_hash, col[name_hash]))
 
         self._update_game_ratings(col)
+        self._update_rating_change()
         self._current_game_guid = None
         self._winners_cache.clear()
         self._losers_cache.clear()
