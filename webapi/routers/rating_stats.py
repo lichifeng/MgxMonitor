@@ -28,7 +28,6 @@ async def get_rating_meta(background_tasks: BackgroundTasks) -> dict:
         return {
             'stats': STATS_CACHE,
             'generated_at': current_time
-
         }
 
     STATS_CACHE = get_rating_stats()

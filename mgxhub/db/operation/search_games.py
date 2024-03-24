@@ -61,7 +61,7 @@ def search_games(criteria: SearchCriteria) -> dict:
         if isinstance(criteria.map_size, list) and len(criteria.map_size) > 0:
             query = query.filter(Game.map_size.in_(criteria.map_size))
 
-    if criteria.order_by in ['created', 'duration', 'game_time']:
+    if criteria.order_by.lower() in ['created', 'duration', 'game_time']:
         order_by = getattr(Game, criteria.order_by)
     else:
         order_by = Game.game_time
@@ -84,7 +84,7 @@ def search_games(criteria: SearchCriteria) -> dict:
         'victory_type': game.victory_type,
         'map_size': game.map_size,
         'instruction': game.instruction,
-        'players': [(player.name, player.civ_name) for player in game.players]
+        'players': [(player.slot, player.name, player.civ_name, player.type, player.name_hash) for player in game.players]
     } for game in query.all()]
     current_time = datetime.now().isoformat()
 

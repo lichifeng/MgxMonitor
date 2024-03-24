@@ -65,6 +65,7 @@ class GameDetail(BaseModel):
 
     guid: str
     game_time: datetime | None
+    first_found: datetime | None
     version_code: str | None
     version_log: int | None
     version_raw: str | None
@@ -105,6 +106,7 @@ class GameDetail(BaseModel):
         super().__init__(
             guid=g.game_guid,
             game_time=g.game_time,
+            first_found=g.created,
             version_code=g.version_code,
             version_log=g.version_log,
             version_raw=g.version_raw,

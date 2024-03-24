@@ -21,6 +21,8 @@ async def upload_a_record(
 ):
     '''Upload a record file to the server.
 
+    See https://github.com/lichifeng/MgxParser#about-status for the status explanation.
+
     - **recfile**: The record file to be uploaded.
 
     Optional:

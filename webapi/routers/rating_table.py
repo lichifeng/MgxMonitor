@@ -18,10 +18,15 @@ async def get_rating_table(
 ) -> dict:
     '''Fetch rating table
 
+    Keys:
+        - **ratings**: [index, name, name_hash, rating, total, wins, streak,
+                        streak_max, highest, lowest, first_played, last_played]
+        - **total**: Total number of ratings.
+
     Defined in: `mgxhub/db/operation/get_rating_table.py`
     '''
 
-    ratings = get_ratings(version_code, matchup, order, page, page_size)
+    result = get_ratings(version_code, matchup, order, page, page_size)
     current_time = datetime.now().isoformat()
 
-    return {'ratings': ratings, 'generated_at': current_time}
+    return {'ratings': result[0], 'total': result[1], 'generated_at': current_time}

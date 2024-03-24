@@ -55,11 +55,11 @@ def _get_rand_players(threshold: int, limit: int) -> None:
 
     result = query.all()
 
-    players = [{
-        'name': row.name,
-        'name_hash': md5(str(row.name).encode('utf-8')).hexdigest(),
-        'game_count': row.game_count
-    } for row in result]
+    players = [[
+        row.name,
+        md5(str(row.name).encode('utf-8')).hexdigest(),
+        row.game_count
+    ] for row in result]
 
     RANDOM_CACHE['cached'] = players
     RANDOM_CACHE['lock'] = False

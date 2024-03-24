@@ -5,6 +5,8 @@ from sqlalchemy import asc, desc, func, select
 from mgxhub import db
 from mgxhub.model.orm import Rating
 
+# pylint: disable=not-callable
+
 
 def get_player_rating_table(
     name_hash: str,
@@ -12,7 +14,7 @@ def get_player_rating_table(
     matchup: str = '1v1',
     order: str = 'desc',
     page_size: int = 100,
-) -> dict:
+) -> tuple[list[list], int]:
     '''Get rating page of where a player is located.
 
     This is not only for the player, but also for page where the player is
@@ -92,4 +94,11 @@ def get_player_rating_table(
         rating_table.c.rownum
     ).limit(page_size).correlate(rating_table, name_hash_index).all()
 
-    return [list(row) for row in ratings]
+    ratings_count = db().query(
+        func.count(Rating.rating)
+    ).filter(
+        Rating.version_code == version_code,
+        Rating.matchup == matchup_value
+    ).scalar()
+
+    return [list(row) for row in ratings], ratings_count

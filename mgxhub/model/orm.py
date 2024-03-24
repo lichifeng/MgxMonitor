@@ -91,6 +91,7 @@ class Player(Base):
                          primaryjoin='Player.slot == foreign(File.recorder_slot) and Player.game_guid == File.game_guid')
 
     idx_name_game_guid = Index('idx_name_game_guid', name, game_guid)
+    idx_player_name_created = Index('idx_player_name_created', created)
 
 
 class File(Base):

@@ -14,7 +14,7 @@ def get_rating_table(
     order: str = 'desc',
     page: int = 0,
     page_size: int = 100,
-) -> list:
+) -> tuple[list[list], int]:
     '''Get ratings information.
 
     Args:
@@ -54,4 +54,11 @@ def get_rating_table(
         page * page_size
     ).all()
 
-    return [list(row) for row in ratings]
+    ratings_count = db().query(
+        func.count(Rating.rating)
+    ).filter(
+        Rating.version_code == version_code,
+        Rating.matchup == matchup_value
+    ).scalar()
+
+    return [list(row) for row in ratings], ratings_count
