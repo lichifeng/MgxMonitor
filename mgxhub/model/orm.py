@@ -117,6 +117,7 @@ class File(Base):
     notes = Column(Text)
     recorder_slot = Column(SmallInteger)
     source = Column(Text)
+    realsize = Column(Integer)
 
     game = relationship('Game', back_populates='files')
     recorder = relationship('Player', back_populates='files',

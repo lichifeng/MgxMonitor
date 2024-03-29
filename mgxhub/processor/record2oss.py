@@ -102,7 +102,7 @@ def save_to_s3(
                     'guid': gamedata['guid'],
                     'md5': gamedata['md5'],
                     'parser': gamedata['parser'],
-                    'played_at': played_at,
+                    'played': played_at,
                     'version': version_code,
                     'matchup': matchup
                 }

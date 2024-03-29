@@ -83,6 +83,7 @@ class GameDetail(BaseModel):
     duration: int | None
     players: dict[int, PlayerInGame] | None
     chats: list[ChatEntry] | None
+    biggest_file: tuple[str, int] | None
 
     def __init__(self, g: Game, p: list[Player], f: list[File], c: list[Chat], lang: str = 'en'):
         '''Load data from ORM models.
@@ -123,7 +124,8 @@ class GameDetail(BaseModel):
             is_multiplayer=g.is_multiplayer,
             duration=g.duration,
             players={},
-            chats=[]
+            chats=[],
+            biggest_file=('', 0)
         )
 
         for player in p:
@@ -152,6 +154,11 @@ class GameDetail(BaseModel):
 
         for file in f:
             if file.recorder_slot in self.players:
+                if isinstance(file.realsize, int):
+                    if file.realsize > self.biggest_file[1]:
+                        self.biggest_file = file.md5, file.realsize
+                elif not self.biggest_file[0]:
+                    self.biggest_file = file.md5, file.realsize
                 self.players[file.recorder_slot].files.append(RecordFile(
                     game_guid=file.game_guid,
                     md5=file.md5,

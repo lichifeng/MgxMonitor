@@ -150,7 +150,8 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
         raw_lastmodified=game_time,
         notes=d.get('message'),
         recorder_slot=d.get('recPlayer'),
-        source=source
+        source=source,
+        realsize=d.get('realsize')
     )
     db().add(record_file)
 

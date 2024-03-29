@@ -11,8 +11,9 @@ from webapi.routers import (auth_logoutall, auth_onlineusers, backup_sqlite,
                             game_search, game_upload, game_visibility,
                             get_langcodes, get_options, map_static, ping,
                             player_active, player_friends, player_latest,
-                            player_profile, player_random, player_searchname,
-                            rating_player_page, rating_start, rating_stats,
+                            player_profile, player_random, player_recent_game,
+                            player_searchname, rating_player_page,
+                            rating_searchname, rating_start, rating_stats,
                             rating_status, rating_table, rating_unlock,
                             stats_total, tmpdir_list, tmpdir_purge)
 

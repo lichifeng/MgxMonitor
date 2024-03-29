@@ -17,8 +17,8 @@ def get_player_rating_stats(name_hash: str) -> list:
 
     result = db().query(
         Rating.name, Rating.name_hash, Rating.version_code, Rating.matchup,
-        Rating.rating, Rating.wins, Rating.total, Rating.streak, Rating.streak_max,
-        Rating.highest, Rating.lowest, Rating.first_played, Rating.last_played
+        Rating.rating, Rating.highest, Rating.lowest, Rating.wins, Rating.total,
+        Rating.streak, Rating.streak_max, Rating.first_played, Rating.last_played
     ).filter(
         Rating.name_hash == name_hash
     ).group_by(
