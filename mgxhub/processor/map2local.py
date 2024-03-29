@@ -27,6 +27,9 @@ def save_map(
         str: Status message. MAP_DIR_NOT_SET, MAP_SAVE_SUCCESS, MAP_SAVE_ERROR
     '''
 
+    if cfg.get('system', 'mapdest') != 'local':
+        return 'MAP_DIR_NOT_SET'
+
     # Determine destination folder
     if not dest:
         dest = cfg.get('system', 'mapdir', fallback=None)
@@ -52,7 +55,7 @@ async def async_save_map(
 ) -> str:
     '''Async version of save_map.
 
-    **Nothing will be done if mapdir is not properly set.** 
+    **Nothing will be done if mapdest is not 'local'.** 
     '''
 
     return save_map(basename, base64src, dest)

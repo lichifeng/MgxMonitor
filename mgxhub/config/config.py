@@ -34,7 +34,8 @@ class Config(DefaultConfig, metaclass=Singleton):
 
         # Load user configuration
         self.load(cfg_path)
-        os.makedirs(self.config.get('system', 'mapdir'), exist_ok=True)
+        if self.config.get('system', 'mapdest') == 'local':
+            os.makedirs(self.config.get('system', 'mapdir'), exist_ok=True)
 
     def load(self, cfg_path: str | None = None):
         '''Load user configuration to override default.

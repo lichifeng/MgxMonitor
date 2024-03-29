@@ -35,6 +35,7 @@ class DefaultConfig:
         self.config['system']['echosql'] = 'off'  # 'on' or 'off'
 
         # Map configuration
+        self.config['system']['mapdest'] = 'local'
         self.config['system']['mapdir'] = os.path.join(self.config['system']['workdir'], 'map')
         self.config['system']['mapdirS3'] = '/maps/'
 
