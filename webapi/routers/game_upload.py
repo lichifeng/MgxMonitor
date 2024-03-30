@@ -5,6 +5,7 @@ from datetime import datetime
 from fastapi import Depends, File, Form, UploadFile
 from fastapi.security import HTTPBasicCredentials
 
+from mgxhub import logger
 from mgxhub.auth import WPRestAPI
 from mgxhub.processor import FileProcessor
 from webapi import app
@@ -36,7 +37,10 @@ async def upload_a_record(
     if s3replace and not WPRestAPI(creds.username, creds.password).need_admin_login(brutal_term=False):
         s3replace = False
 
-    if not lastmod:
+    try:
+        lastmod = datetime.fromtimestamp(int(lastmod)).isoformat()
+    except Exception as e:
+        logger.warning(f'Invalid lastmod: {e}')
         lastmod = datetime.now().isoformat()
 
     processed = FileProcessor(

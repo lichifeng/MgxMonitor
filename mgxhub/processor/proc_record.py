@@ -31,6 +31,8 @@ def process_record(
         recpath (str): The path of the record file to be processed.
         waitio (bool): Whether to wait for the I/O tasks to complete. Like saving to S3 and DB ops.
         opts (str): Options for the processor.
+        s3replace (bool): Whether to replace the existing file in S3.
+        cleanup (bool): Whether to delete the file after processing.
 
     Returns:
         dict: The result of the processing.

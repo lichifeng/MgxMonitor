@@ -68,7 +68,7 @@ def search_games(criteria: SearchCriteria) -> dict:
     if criteria.order_desc:
         order_by = desc(order_by)
 
-    query = query.order_by(order_by).limit(criteria.page_size).offset(criteria.page * criteria.page_size)
+    query = query.order_by(order_by).limit(criteria.page_size).offset((criteria.page - 1) * criteria.page_size)
 
     games = [{
         'game_guid': game.game_guid,
