@@ -38,7 +38,7 @@ async def upload_a_record(
         s3replace = False
 
     try:
-        lastmod = datetime.fromtimestamp(int(lastmod)).isoformat()
+        lastmod = datetime.fromtimestamp(float(lastmod)).isoformat()
     except Exception as e:
         logger.warning(f'Invalid lastmod: {e}')
         lastmod = datetime.now().isoformat()

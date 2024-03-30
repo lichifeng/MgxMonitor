@@ -27,7 +27,7 @@ RUN <<EOF
 echo "deb http://deb.debian.org/debian bookworm main non-free" > /etc/apt/sources.list
 apt-get update
 apt-get update --allow-releaseinfo-change
-apt-get install -y libpng16-16 openssl p7zip unrar
+apt-get install -y libpng16-16 openssl p7zip-full unrar
 pip install --no-cache-dir -r requirements.txt
 apt-get autoremove -y
 apt-get clean
