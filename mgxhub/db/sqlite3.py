@@ -53,7 +53,7 @@ class SQLite3(metaclass=Singleton):
         self._db_path = os.path.join(cfg.get('system', 'projectroot'), db_path)
 
         self._db_engine = create_engine(
-            f"sqlite:///{self._db_path}", echo=(cfg.get('system', 'echosql').upper() == 'on'))
+            f"sqlite:///{self._db_path}", echo=(cfg.get('system', 'echosql').lower() == 'on'))
         Base.metadata.create_all(self._db_engine)
         self._db_session = Session(self._db_engine)
         logger.debug(f"SQLite loaded: {self._db_path}")

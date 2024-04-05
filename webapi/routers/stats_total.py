@@ -15,7 +15,7 @@ from webapi import app
 STATS_CACHE = {'cached': None, 'timestamp': 0}
 
 
-def _get_total_stats() -> dict:
+def get_total_stats_raw() -> dict:
     '''Get unique games/players count, new games this month
 
     Returns:
@@ -50,6 +50,18 @@ def _get_total_stats() -> dict:
     return stats
 
 
+async def get_total_stats_raw_async() -> dict:
+    '''Get unique games/players count, new games this month
+
+    Returns:
+        A dictionary containing the stats.
+
+    Defined in: `mgxhub/db/operation/stats_index.py`
+    '''
+
+    return get_total_stats_raw()
+
+
 @app.get("/stats/total")
 async def get_total_stats(background_tasks: BackgroundTasks) -> dict:
     '''Get unique games/players count, new games this month
@@ -62,7 +74,7 @@ async def get_total_stats(background_tasks: BackgroundTasks) -> dict:
 
     if STATS_CACHE['cached']:
         if (datetime.now() - STATS_CACHE['timestamp']).seconds > 60:
-            background_tasks.add_task(_get_total_stats)
+            background_tasks.add_task(get_total_stats_raw)
         return STATS_CACHE['cached']
 
-    return _get_total_stats()
+    return get_total_stats_raw()

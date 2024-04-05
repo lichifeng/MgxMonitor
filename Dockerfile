@@ -32,6 +32,7 @@ pip install --no-cache-dir -r requirements.txt
 apt-get autoremove -y
 apt-get clean
 rm -rf /var/lib/apt/lists/*
+rm /etc/apt/sources.list
 EOF
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]

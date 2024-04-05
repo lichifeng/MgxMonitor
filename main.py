@@ -15,7 +15,8 @@ from webapi.routers import (auth_logoutall, auth_onlineusers, backup_sqlite,
                             player_searchname, rating_player_page,
                             rating_searchname, rating_start, rating_stats,
                             rating_status, rating_table, rating_unlock,
-                            stats_total, tmpdir_list, tmpdir_purge)
+                            shortcut_homepage, stats_total, tmpdir_list,
+                            tmpdir_purge)
 
 # Start monitoring the upload directory
 watcher = RecordWatcher()
