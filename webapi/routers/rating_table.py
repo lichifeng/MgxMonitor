@@ -4,6 +4,7 @@ from datetime import datetime
 
 from fastapi import Query
 
+from mgxhub import db
 from mgxhub.db.operation import get_rating_table as get_ratings
 from webapi import app
 
@@ -26,7 +27,8 @@ async def get_rating_table(
     Defined in: `mgxhub/db/operation/get_rating_table.py`
     '''
 
-    result = get_ratings(version_code, matchup, order, page, page_size)
+    session = db()
+    result = get_ratings(session, version_code, matchup, order, page, page_size)
     current_time = datetime.now().isoformat()
 
     return {'ratings': result[0], 'total': result[1], 'generated_at': current_time}

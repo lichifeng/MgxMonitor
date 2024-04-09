@@ -1,14 +1,15 @@
 '''Get rating table'''
 
 from sqlalchemy import asc, desc, func
+from sqlalchemy.orm import Session
 
-from mgxhub import db
 from mgxhub.model.orm import Rating
 
 # pylint: disable=not-callable
 
 
 def get_rating_table(
+    session: Session,
     version_code: str = 'AOC10',
     matchup: str = '1v1',
     order: str = 'desc',
@@ -30,7 +31,7 @@ def get_rating_table(
     if page < 0 or page_size < 1:
         return []
 
-    ratings = db().query(
+    ratings = session.query(
         func.row_number().over(order_by=order_method(Rating.rating)).label('rownum'),
         Rating.name,
         Rating.name_hash,
@@ -54,7 +55,7 @@ def get_rating_table(
         page * page_size
     ).all()
 
-    ratings_count = db().query(
+    ratings_count = session.query(
         func.count(Rating.rating)
     ).filter(
         Rating.version_code == version_code,

@@ -5,6 +5,7 @@ import threading
 import time
 
 from mgxhub.config import cfg
+from mgxhub.db import db
 from mgxhub.logger import logger
 from mgxhub.processor import FileProcessor
 
@@ -13,6 +14,9 @@ class RecordWatcher:
     '''Watches the work directory for new files and processes them'''
 
     def __init__(self):
+        '''Initialize the watcher'''
+
+        self.session = db()
         self.work_dir = cfg.get('system', 'uploaddir')
         os.makedirs(self.work_dir, exist_ok=True)
 
@@ -33,7 +37,8 @@ class RecordWatcher:
             for filename in files:
                 file_path = os.path.join(root, filename)
                 try:
-                    file_processor = FileProcessor(file_path, syncproc=True, s3replace=False, cleanup=True)
+                    file_processor = FileProcessor(self.session, file_path, syncproc=True,
+                                                   s3replace=False, cleanup=True)
                 except Exception as e:
                     logger.error(f"[Watcher] Error [{file_path}]: {e}")
                     # This exception may due to unfinished file writing, so we wait for a while

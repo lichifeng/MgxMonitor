@@ -17,14 +17,15 @@ async def delete_game(guid: str) -> dict:
     Defined in: `webapi/routers/game_delete.py`
     '''
 
-    game = db().query(Game).filter(Game.game_guid == guid).first()
+    session = db()
+    game = session.query(Game).filter(Game.game_guid == guid).first()
     if game:
-        db().query(Player).filter(Player.game_guid == guid).delete()
-        db().query(Chat).filter(Chat.game_guid == guid).delete()
-        db().query(File).filter(File.game_guid == guid).delete()
-        db().query(LegacyInfo).filter(LegacyInfo.game_guid == guid).delete()
-        db().delete(game)
-        db().commit()
+        session.query(Player).filter(Player.game_guid == guid).delete()
+        session.query(Chat).filter(Chat.game_guid == guid).delete()
+        session.query(File).filter(File.game_guid == guid).delete()
+        session.query(LegacyInfo).filter(LegacyInfo.game_guid == guid).delete()
+        session.delete(game)
+        session.commit()
         logger.info(f"[DB] Delete: {guid}")
         return JSONResponse(status_code=200, content={"detail": f"Game [{guid}] deleted"})
 

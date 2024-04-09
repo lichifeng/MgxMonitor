@@ -21,10 +21,11 @@ async def set_game_visibility(guid: str, lv: int = 0) -> dict:
     if lv not in [0, 1, 2]:
         raise HTTPException(status_code=400, detail="Invalid visibility level. Must be 0, 1, or 2.")
 
-    game = db().query(Game).filter(Game.game_guid == guid).first()
+    session = db()
+    game = session.query(Game).filter(Game.game_guid == guid).first()
     if game:
         game.visibility = lv
-        db().commit()
+        session.commit()
         return JSONResponse(status_code=200, content={"detail": f"Game [{guid}] visibility set to {lv}"})
 
     raise HTTPException(status_code=404, detail=f"Game [{guid}] not found")

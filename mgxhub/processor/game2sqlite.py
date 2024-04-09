@@ -1,11 +1,13 @@
 '''Save game data to SQLite database'''
 
+from sqlalchemy.orm import Session
+
 from mgxhub import logger
 from mgxhub.db.operation import add_game
 from mgxhub.rating import RatingLock
 
 
-def save_game_sqlite(data: dict) -> tuple[str, str]:
+def save_game_sqlite(session: Session, data: dict) -> tuple[str, str]:
     '''Save game data to SQLite database.
 
     **Only handles data. Need to clean the file depends on returned status.**
@@ -21,7 +23,7 @@ def save_game_sqlite(data: dict) -> tuple[str, str]:
     '''
 
     try:
-        result = add_game(data)
+        result = add_game(session, data)
         logger.info(f'Game added: {result}')
         if result[0] in ['success', 'updated']:
             RatingLock().start_calc(schedule=True)
@@ -32,10 +34,10 @@ def save_game_sqlite(data: dict) -> tuple[str, str]:
     return result
 
 
-async def async_save_game_sqlite(data: dict) -> tuple[str, str]:
+async def async_save_game_sqlite(session: Session, data: dict) -> tuple[str, str]:
     '''Async version of save_game_sqlite.
 
     **Only handles data. Need to clean the file depends on returned status.**
     '''
 
-    return save_game_sqlite(data)
+    return save_game_sqlite(session, data)

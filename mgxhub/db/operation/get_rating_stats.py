@@ -1,14 +1,14 @@
 '''Get rating statistics of different versions'''
 
 from sqlalchemy import desc, func
+from sqlalchemy.orm import Session
 
-from mgxhub import db
 from mgxhub.model.orm import Rating
 
 # pylint: disable=not-callable
 
 
-def get_rating_stats() -> list:
+def get_rating_stats(session: Session) -> list:
     '''Get rating statistics of different versions
 
     Used in ratings page to show the number of ratings for each version.
@@ -18,7 +18,7 @@ def get_rating_stats() -> list:
 
     count = func.count(Rating.version_code).label('count')
 
-    result = db().query(
+    result = session.query(
         Rating.version_code,
         count
     ).group_by(

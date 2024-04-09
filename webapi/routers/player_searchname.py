@@ -4,6 +4,7 @@ from datetime import datetime
 
 from fastapi import Query
 
+from mgxhub import db
 from mgxhub.db.operation import search_players_by_name
 from webapi import app
 
@@ -28,7 +29,8 @@ async def search_player_by_name(
     Defined in: `webapi/routers/player_searchname.py`
     '''
 
-    result = search_players_by_name(player_name, stype, orderby, page - 1, page_size)
+    session = db()
+    result = search_players_by_name(session, player_name, stype, orderby, page, page_size)
     current_time = datetime.now().isoformat()
 
     return {'players': result, 'generated_at': current_time}

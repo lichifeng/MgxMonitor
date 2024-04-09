@@ -29,7 +29,8 @@ async def get_player_name_by_hash(
     Defined in: `webapi/routers/rating_searchname.py`
     '''
 
-    names = db().query(
+    session = db()
+    names = session.query(
         Rating.name,
         Rating.name_hash,
         Rating.rating

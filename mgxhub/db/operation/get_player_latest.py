@@ -1,14 +1,14 @@
 '''Get latest players'''
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
-from mgxhub import db
 from mgxhub.model.orm import Game, Player
 
 # pylint: disable=E1102
 
 
-def get_latest_players(limit: int = 20) -> dict:
+def get_latest_players(session: Session, limit: int = 20) -> dict:
     '''Newly found players.
 
     Including name, name_hash, first_found, won games, total games, and 1v1 games counts.
@@ -27,7 +27,7 @@ def get_latest_players(limit: int = 20) -> dict:
         Player.name
     ).subquery('p')
 
-    result = db().query(
+    result = session.query(
         player_query.c.name,
         player_query.c.name_hash,
         player_query.c.first_found,

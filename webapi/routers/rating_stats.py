@@ -4,6 +4,7 @@ from datetime import datetime
 
 from fastapi import BackgroundTasks
 
+from mgxhub import db
 from mgxhub.db.operation import get_rating_stats
 from webapi import app
 
@@ -23,13 +24,14 @@ async def get_rating_meta(background_tasks: BackgroundTasks) -> dict:
 
     current_time = datetime.now().isoformat()
 
+    session = db()
     if STATS_CACHE:
-        background_tasks.add_task(get_rating_stats)
+        background_tasks.add_task(get_rating_stats, session)
         return {
             'stats': STATS_CACHE,
             'generated_at': current_time
         }
 
-    STATS_CACHE = get_rating_stats()
+    STATS_CACHE = get_rating_stats(session)
 
     return {'stats': STATS_CACHE, 'generated_at': current_time}

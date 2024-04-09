@@ -3,7 +3,7 @@
 
 from fastapi import Body
 
-from mgxhub import logger
+from mgxhub import db, logger
 from mgxhub.db.operation import search_games as search_games_in_db
 from mgxhub.model.searchcriteria import SearchCriteria
 from webapi import app
@@ -24,4 +24,5 @@ async def search_games(criteria: SearchCriteria = Body(...)) -> dict:
 
     logger.info(criteria.model_dump())
 
-    return search_games_in_db(criteria)
+    session = db()
+    return search_games_in_db(session, criteria)

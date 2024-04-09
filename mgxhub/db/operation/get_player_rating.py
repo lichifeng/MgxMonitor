@@ -1,6 +1,7 @@
 '''Get rating page of where a player is located'''
 
 from sqlalchemy import asc, desc, func, select
+from sqlalchemy.orm import Session
 
 from mgxhub import db
 from mgxhub.model.orm import Rating
@@ -9,6 +10,7 @@ from mgxhub.model.orm import Rating
 
 
 def get_player_rating_table(
+    session: Session,
     name_hash: str,
     version_code: str = 'AOC10',
     matchup: str = '1v1',
@@ -26,32 +28,6 @@ def get_player_rating_table(
 
     Defined in: `mgxhub/db/operation/get_player_rating.py`
     '''
-
-    # sql = text(f"""
-    #     WITH rating_table AS (
-    #         SELECT ROW_NUMBER() OVER (ORDER BY rating {order_method}, total DESC) AS rownum,
-    #             name,
-    #             name_hash,
-    #             rating,
-    #             total,
-    #             wins,
-    #             streak,
-    #             streak_max,
-    #             highest,
-    #             lowest,
-    #             first_played,
-    #             last_played
-    #         FROM ratings
-    #         WHERE version_code = :version_code AND matchup = :matchup_value
-    #         ORDER BY rating {order_method}
-    #     ), name_hash_index AS (
-    #         SELECT rownum FROM rating_table WHERE name_hash = :name_hash
-    #     )
-    #     SELECT * FROM rating_table
-    #     WHERE rownum > (SELECT rownum FROM name_hash_index) / :page_size * :page_size AND rownum <= ((SELECT rownum FROM name_hash_index) / :page_size + 1) * :page_size
-    #     ORDER BY rownum
-    #     LIMIT :page_size;
-    # """)
 
     matchup_value = '1v1' if matchup.lower() == '1v1' else 'team'
     order_method = desc if order.lower() == 'desc' else asc
@@ -85,7 +61,7 @@ def get_player_rating_table(
 
     name_hash_rownum = select(name_hash_index.c.rownum).limit(1).as_scalar()
 
-    ratings = db().query(
+    ratings = session.query(
         rating_table
     ).filter(
         rating_table.c.rownum > (name_hash_rownum // page_size) * page_size,
@@ -94,7 +70,7 @@ def get_player_rating_table(
         rating_table.c.rownum
     ).limit(page_size).correlate(rating_table, name_hash_index).all()
 
-    ratings_count = db().query(
+    ratings_count = session.query(
         func.count(Rating.rating)
     ).filter(
         Rating.version_code == version_code,

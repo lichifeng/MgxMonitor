@@ -4,13 +4,14 @@ from datetime import datetime
 from hashlib import md5
 
 from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.orm import Session
 
-from mgxhub import db, logger
+from mgxhub import logger
 from mgxhub.model.orm import Chat, File, Game, Player
 from mgxhub.util import sanitize_playername
 
 
-def _update_gametime(game: Game, game_time: datetime) -> bool:
+def _update_gametime(session: Session, game: Game, game_time: datetime) -> bool:
     '''Update the game time of a game.
 
     Args:
@@ -25,13 +26,13 @@ def _update_gametime(game: Game, game_time: datetime) -> bool:
 
     if game:
         game.game_time = game_time
-        db().commit()
+        session.commit()
         logger.info(f'[DB] game_time updated: {game.game_guid}')
         return True
     return False
 
 
-def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]:
+def add_game(session: Session, d: dict, t: str | None = None, source: str = "") -> tuple[str, str]:
     '''Add a game to the database.
 
     Args:
@@ -64,7 +65,7 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
     if game_time < datetime(1999, 3, 30) or game_time > datetime.now():
         game_time = datetime.now()
 
-    game = db().query(Game).filter(Game.game_guid == d.get('guid')).first()
+    game = session.query(Game).filter(Game.game_guid == d.get('guid')).first()
     if game and isinstance(game.duration, (int, float)):
         update_gametime = False
         if hasattr(game, 'game_time') and game_time < game.game_time:
@@ -75,16 +76,16 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
         # Longer records may had lost the original creation time while short ones not.
         if game.duration > d.get('duration'):
             if update_gametime:
-                _update_gametime(game, game_time)
+                _update_gametime(session, game, game_time)
             return "exists", game.game_guid
         if game.duration == d.get('duration'):
-            same_file = db().query(File).filter(File.md5 == d.get('md5')).first()
+            same_file = session.query(File).filter(File.md5 == d.get('md5')).first()
             if same_file:
                 if update_gametime:
-                    _update_gametime(game, game_time)
+                    _update_gametime(session, game, game_time)
                 return "duplicated", game.game_guid
 
-    merged_game = db().merge(Game(
+    merged_game = session.merge(Game(
         id=game.id if game else None,
         game_guid=d.get('guid'),
         duration=d.get('duration'),
@@ -109,7 +110,7 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
     players = d.get('players')
     if players:
         # delete old records where game_guid = d.get('guid')
-        db().query(Player).filter(Player.game_guid == d.get('guid')).delete()
+        session.query(Player).filter(Player.game_guid == d.get('guid')).delete()
 
         for p in players:
             if p.get('name'):
@@ -138,7 +139,7 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
                 'imperial_time': p.get('imperialTime'),
                 'resigned_time': p.get('resigned')
             })
-        db().bulk_insert_mappings(Player, player_batch)
+        session.bulk_insert_mappings(Player, player_batch)
 
     record_file = File(
         game_guid=d.get('guid'),
@@ -153,7 +154,7 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
         source=source,
         realsize=d.get('realsize')
     )
-    db().add(record_file)
+    session.add(record_file)
 
     chats = d.get('chat')
     if chats:
@@ -165,9 +166,9 @@ def add_game(d: dict, t: str | None = None, source: str = "") -> tuple[str, str]
             }
             stmt = insert(Chat).values(chat).on_conflict_do_nothing(
                 index_elements=['game_guid', 'chat_time', 'chat_content'])
-            db().execute(stmt)
+            session.execute(stmt)
 
-    db().commit()
+    session.commit()
 
     if game:
         return "updated", merged_game.game_guid

@@ -19,13 +19,14 @@ async def get_game(guid: str, lang: str = 'en') -> GameDetail | None:
     Defined in: `webapi/routers/game_detail.py`
     '''
 
-    game_basic = db().query(Game).filter(Game.game_guid == guid).first()
+    session = db()
+    game_basic = session.query(Game).filter(Game.game_guid == guid).first()
     if game_basic is None:
         raise HTTPException(status_code=404, detail=f"Game profile [{guid}] not found")
 
-    player_data = db().query(Player).filter(Player.game_guid == guid).all()
-    file_data = db().query(File).filter(File.game_guid == guid).limit(10).all()
-    chat_data = db().query(Chat.chat_time, Chat.chat_content)\
+    player_data = session.query(Player).filter(Player.game_guid == guid).all()
+    file_data = session.query(File).filter(File.game_guid == guid).limit(10).all()
+    chat_data = session.query(Chat.chat_time, Chat.chat_content)\
         .filter(Chat.game_guid == guid)\
         .group_by(Chat.chat_time, Chat.chat_content)\
         .order_by(asc(Chat.chat_time))\

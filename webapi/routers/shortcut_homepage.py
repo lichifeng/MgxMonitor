@@ -4,9 +4,10 @@ import asyncio
 
 from fastapi import Query
 
+from mgxhub import db
+from mgxhub.db.operation import (fetch_latest_games_async,
+                                 get_active_players_async)
 from webapi import app
-from webapi.routers.game_latest import fetch_latest_games_raw_async
-from webapi.routers.player_active import get_active_players_raw_async
 from webapi.routers.stats_total import get_total_stats_raw_async
 
 
@@ -21,11 +22,11 @@ async def fetch_homepage_data(
     Defined in: `webapi/routers/shortcut_homepage.py`
     '''
 
-    # 并发运行所有的异步操作
+    session = db()
     results = await asyncio.gather(
-        fetch_latest_games_raw_async(glimit),
-        get_active_players_raw_async(plimit, pdays),
-        get_total_stats_raw_async()
+        fetch_latest_games_async(session, glimit),
+        get_active_players_async(session, plimit, pdays),
+        get_total_stats_raw_async(session)
     )
 
     # 返回结果

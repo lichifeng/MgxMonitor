@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from fastapi import BackgroundTasks
 from sqlalchemy import func, literal_column, select, union_all
+from sqlalchemy.orm import Session
 
 from mgxhub import db
 from mgxhub.model.orm import Game, Player
@@ -15,7 +16,7 @@ from webapi import app
 STATS_CACHE = {'cached': None, 'timestamp': 0}
 
 
-def get_total_stats_raw() -> dict:
+def get_total_stats_raw(session: Session) -> dict:
     '''Get unique games/players count, new games this month
 
     Returns:
@@ -40,7 +41,7 @@ def get_total_stats_raw() -> dict:
 
     query = union_all(unique_games, unique_players, monthly_games)
 
-    result = db().execute(query)
+    result = session.execute(query)
     results = result.fetchall()
     stats = dict(results)
     stats['generated_at'] = datetime.now().isoformat()
@@ -50,7 +51,7 @@ def get_total_stats_raw() -> dict:
     return stats
 
 
-async def get_total_stats_raw_async() -> dict:
+async def get_total_stats_raw_async(session: Session) -> dict:
     '''Get unique games/players count, new games this month
 
     Returns:
@@ -59,7 +60,7 @@ async def get_total_stats_raw_async() -> dict:
     Defined in: `mgxhub/db/operation/stats_index.py`
     '''
 
-    return get_total_stats_raw()
+    return get_total_stats_raw(session)
 
 
 @app.get("/stats/total")
@@ -72,9 +73,10 @@ async def get_total_stats(background_tasks: BackgroundTasks) -> dict:
     Defined in: `mgxhub/db/operation/stats_index.py`
     '''
 
+    session = db()
     if STATS_CACHE['cached']:
         if (datetime.now() - STATS_CACHE['timestamp']).seconds > 60:
-            background_tasks.add_task(get_total_stats_raw)
+            background_tasks.add_task(get_total_stats_raw, session)
         return STATS_CACHE['cached']
 
-    return get_total_stats_raw()
+    return get_total_stats_raw(session)

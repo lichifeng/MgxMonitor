@@ -3,13 +3,13 @@
 from datetime import datetime
 
 from sqlalchemy import desc
+from sqlalchemy.orm import Session
 
-from mgxhub import db
 from mgxhub.model.orm import Game
 from mgxhub.model.searchcriteria import SearchCriteria
 
 
-def search_games(criteria: SearchCriteria) -> dict:
+def search_games(session: Session, criteria: SearchCriteria) -> dict:
     '''Search games.
 
     Args:
@@ -25,7 +25,7 @@ def search_games(criteria: SearchCriteria) -> dict:
     Defined in: `mgxhub/model/searchresult.py`
     '''
 
-    query = db().query(Game)
+    query = session.query(Game)
 
     if criteria.game_guid and len(criteria.game_guid) == 32:
         query = query.filter(Game.game_guid == criteria.game_guid)

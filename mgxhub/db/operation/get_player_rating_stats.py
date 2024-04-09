@@ -1,12 +1,13 @@
 '''Get rating stats of a player'''
 
-from mgxhub import db
+from sqlalchemy.orm import Session
+
 from mgxhub.model.orm import Rating
 
 # pylint: disable=not-callable
 
 
-def get_player_rating_stats(name_hash: str) -> list:
+def get_player_rating_stats(session: Session, name_hash: str) -> list:
     '''Get rating stats of a player, grouped by version_code and matchup.
 
     Args:
@@ -15,7 +16,7 @@ def get_player_rating_stats(name_hash: str) -> list:
     Defined in: `mgxhub/db/operation/get_player_rating_stats.py`
     '''
 
-    result = db().query(
+    result = session.query(
         Rating.name, Rating.name_hash, Rating.version_code, Rating.matchup,
         Rating.rating, Rating.highest, Rating.lowest, Rating.wins, Rating.total,
         Rating.streak, Rating.streak_max, Rating.first_played, Rating.last_played
@@ -28,7 +29,7 @@ def get_player_rating_stats(name_hash: str) -> list:
     return [tuple(row) for row in result]
 
 
-async def async_get_player_rating_stats(name_hash: str) -> list:
+async def async_get_player_rating_stats(session: Session, name_hash: str) -> list:
     '''Async version of fetch_player_rating_stats()'''
 
-    return get_player_rating_stats(name_hash)
+    return get_player_rating_stats(session, name_hash)

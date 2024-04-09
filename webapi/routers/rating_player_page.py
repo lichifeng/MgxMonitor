@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from mgxhub import db
 from mgxhub.db.operation import get_player_rating_table
 from webapi import app
 
@@ -32,7 +33,8 @@ async def player_rating_page(
     Defined in: `webapi/routers/rating_player_page.py`
     '''
 
-    ratingpage = get_player_rating_table(player_hash, version_code, matchup, order, page_size)
+    session = db()
+    ratingpage = get_player_rating_table(session, player_hash, version_code, matchup, order, page_size)
     current_time = datetime.now().isoformat()
 
     return {'ratings': ratingpage[0], 'total': ratingpage[1], 'generated_at': current_time}

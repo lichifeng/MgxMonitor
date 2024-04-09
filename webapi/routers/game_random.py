@@ -22,7 +22,8 @@ async def fetch_rand_games(threshold: int = Query(10, gt=0), limit: int = Query(
     Defined in: `webapi/routers/game_random.py`
     '''
 
-    result = db().query(
+    session = db()
+    result = session.query(
         Game.game_guid, Game.version_code,
         Game.created, Game.map_name, Game.matchup,
         Game.duration, Game.speed

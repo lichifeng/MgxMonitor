@@ -30,7 +30,8 @@ async def get_game_option_stats() -> dict:
         SELECT 'map_size' AS column_name, unique_value FROM (SELECT DISTINCT map_size AS unique_value FROM games);
     """)
 
-    result = db().execute(query).fetchall()
+    session = db()
+    result = session.execute(query).fetchall()
     stats = {}
     for name, optval in result:
         if not optval:

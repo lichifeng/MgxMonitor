@@ -1,8 +1,8 @@
 '''Search players by name.'''
 
 from sqlalchemy import asc, desc, func
+from sqlalchemy.orm import Session
 
-from mgxhub import db
 from mgxhub.model.orm import Player
 from mgxhub.util import sanitize_playername
 
@@ -10,10 +10,11 @@ from mgxhub.util import sanitize_playername
 
 
 def search_players_by_name(
+    session: Session,
     name: str,
     stype: str = 'std',
     orderby: str = 'nad',
-    page: int = 0,
+    page: int = 1,
     page_size: int = 100
 ) -> list:
     '''Search players by name.
@@ -30,7 +31,7 @@ def search_players_by_name(
 
     name = sanitize_playername(name)
 
-    if page < 0 or page_size < 1:
+    if page < 1 or page_size < 1:
         return []
 
     order_parts = []
@@ -51,7 +52,7 @@ def search_players_by_name(
         else:
             order_parts.append(asc)
 
-    query = db().query(
+    query = session.query(
         Player.name,
         Player.name_hash,
         game_count
@@ -74,7 +75,7 @@ def search_players_by_name(
     ).limit(
         page_size
     ).offset(
-        page * page_size
+        (page - 1) * page_size
     )
 
     return [list(row) for row in query.all()]

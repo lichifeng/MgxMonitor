@@ -3,12 +3,12 @@
 # pylint: disable=E1102
 
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
-from mgxhub import db
 from mgxhub.model.orm import Game, Player
 
 
-def get_player_totals(name_hash: str) -> dict:
+def get_player_totals(session: Session, name_hash: str) -> dict:
     '''Get game counts of a player.
 
     Args:
@@ -17,20 +17,20 @@ def get_player_totals(name_hash: str) -> dict:
     Defined in: `mgxhub/db/operation/get_player_counts.py`
     '''
 
-    total_games = db().query(func.count(Game.game_guid.distinct()))\
+    total_games = session.query(func.count(Game.game_guid.distinct()))\
         .join(Player, Game.game_guid == Player.game_guid)\
         .filter(Player.name_hash == name_hash).scalar()
-    total_wins = db().query(func.count(Game.game_guid.distinct()))\
+    total_wins = session.query(func.count(Game.game_guid.distinct()))\
         .join(Player, Game.game_guid == Player.game_guid)\
         .filter(Player.name_hash == name_hash, Player.is_winner).scalar()
-    total_1v1 = db().query(func.count(Game.game_guid.distinct()))\
+    total_1v1 = session.query(func.count(Game.game_guid.distinct()))\
         .join(Player, Game.game_guid == Player.game_guid)\
         .filter(Player.name_hash == name_hash, Game.matchup == '1v1').scalar()
 
     return {"total_games": total_games, "total_wins": total_wins, "total_1v1_games": total_1v1}
 
 
-async def async_get_player_totals(name_hash: str) -> dict:
+async def async_get_player_totals(session: Session, name_hash: str) -> dict:
     '''Async version of fetch_player_totals()'''
 
-    return get_player_totals(name_hash)
+    return get_player_totals(session, name_hash)

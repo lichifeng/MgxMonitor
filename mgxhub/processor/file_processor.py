@@ -7,6 +7,8 @@ import shutil
 import string
 from datetime import datetime
 
+from sqlalchemy.orm import Session
+
 from mgxhub import cfg, logger
 
 from .allowed_types import ACCEPTED_COMPRESSED_TYPES, ACCEPTED_RECORD_TYPES
@@ -45,9 +47,11 @@ class FileProcessor:
     _cleanup: bool = False
     _tmpdir: str = None
     _output: dict = None
+    _session: Session = None
 
     def __init__(
             self,
+            session: Session,
             src: str | io.StringIO | io.BytesIO | io.TextIOWrapper,
             syncproc: bool = True,
             s3replace: bool = False,
@@ -63,6 +67,7 @@ class FileProcessor:
                 raise ValueError('Buffer meta info required for buffer input.')
             self._filepath = self._save_buffer(src, *buffermeta)
 
+        self._session = session
         self._syncproc = syncproc
         self._cleanup = cleanup
         self._s3replace = s3replace
@@ -105,7 +110,8 @@ class FileProcessor:
         fileext = self._filepath.split('.')[-1].lower()
         if fileext in ACCEPTED_RECORD_TYPES:
             logger.debug(f'Proc(record): {self._filepath}')
-            self._output = process_record(self._filepath, self._syncproc, '-b', self._s3replace, self._cleanup)
+            self._output = process_record(self._session, self._filepath, self._syncproc,
+                                          '-b', self._s3replace, self._cleanup)
 
         if fileext in ACCEPTED_COMPRESSED_TYPES:
             logger.debug(f'Proc(compressed): {self._filepath}')
