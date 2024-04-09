@@ -236,7 +236,7 @@ class EloCalculator:
 
         # Commit the changes
         self._session.commit()
-        logger.info("Ratings table updated")
+        logger.debug("Ratings table updated")
 
     def set_K(self, K: int):
         '''Set the maximum possible adjustment.'''

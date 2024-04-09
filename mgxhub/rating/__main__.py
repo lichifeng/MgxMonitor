@@ -63,7 +63,7 @@ def main(db_path: str, duration_threshold: str, batch_size: str):
     # Create the log message
     log_message = f"Rating calculated, duration: {elapsed_time}"
 
-    logger.info(log_message)
+    logger.debug(log_message)
 
 
 if __name__ == "__main__":

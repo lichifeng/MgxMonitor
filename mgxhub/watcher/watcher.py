@@ -39,7 +39,7 @@ class RecordWatcher:
                     # This exception may due to unfinished file writing, so we wait for a while
                     time.sleep(3)
                     return
-                logger.info(
+                logger.debug(
                     f"[Watcher] {file_path}: {file_processor.result().get('status', 'unknown')}")
                 if os.path.isfile(file_path):
                     os.remove(file_path)

@@ -104,11 +104,11 @@ class FileProcessor:
 
         fileext = self._filepath.split('.')[-1].lower()
         if fileext in ACCEPTED_RECORD_TYPES:
-            logger.info(f'Proc(record): {self._filepath}')
+            logger.debug(f'Proc(record): {self._filepath}')
             self._output = process_record(self._filepath, self._syncproc, '-b', self._s3replace, self._cleanup)
 
         if fileext in ACCEPTED_COMPRESSED_TYPES:
-            logger.info(f'Proc(compressed): {self._filepath}')
+            logger.debug(f'Proc(compressed): {self._filepath}')
             self._output = process_compressed(self._filepath, self._cleanup)
 
         return {'status': 'invalid', 'message': 'unsupported file type'}

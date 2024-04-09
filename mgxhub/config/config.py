@@ -58,4 +58,4 @@ class Config(DefaultConfig, metaclass=Singleton):
         cfg_path = os.path.join(self.project_root(), cfg_path)
         if os.path.exists(cfg_path) and os.path.isfile(cfg_path):
             self.config.read(cfg_path)
-            print(f'Configuration file loaded: {cfg_path}')
+            # print(f'Configuration file loaded: {cfg_path}')
