@@ -1,6 +1,7 @@
 '''Used to watch the work directory for new files and process them'''
 
 import atexit
+import fcntl
 import os
 import threading
 import time
@@ -20,18 +21,14 @@ class RecordWatcher:
         '''Initialize the watcher'''
 
         self.lock_file = "/tmp/mgxhub_record_watcher.lock"
-        if os.path.exists(self.lock_file):
-            with open(self.lock_file, "r", encoding="ascii") as file:
-                pid = int(file.read())
-                try:
-                    os.kill(pid, 0)
-                except OSError:  # No such process
-                    os.remove(self.lock_file)
-                else:  # Process exists
-                    return
+        self.file = open(self.lock_file, 'w', encoding='ascii')
 
-        with open(self.lock_file, "w", encoding="ascii") as file:
-            file.write(str(os.getpid()))
+        try:
+            fcntl.flock(self.file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except IOError:
+            # another instance is running
+            print("Another watcher instance is running")
+            return
 
         atexit.register(self._remove_lock_file)
 
@@ -47,8 +44,9 @@ class RecordWatcher:
 
     def _remove_lock_file(self):
         '''Remove the lock file'''
-        if os.path.exists(self.lock_file):
-            os.remove(self.lock_file)
+
+        fcntl.flock(self.file, fcntl.LOCK_UN)
+        self.file.close()
 
     def _watch(self):
         '''Watch the work directory for new files and process them'''

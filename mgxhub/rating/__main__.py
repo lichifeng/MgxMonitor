@@ -53,17 +53,22 @@ def main(db_path: str, duration_threshold: str, batch_size: str):
     start_time = time.time()
 
     try:
-        engine = create_engine(f"sqlite:///{db_path}", echo=False)
+        engine = create_engine(f"sqlite:///{db_path}", echo=False, connect_args={'timeout': 60})
         session = Session(engine)
         elo = EloCalculator(session)
         duration_threshold = int(duration_threshold)
         batch_size = int(batch_size)
-        if duration_threshold > 0 and batch_size > 50000:
-            elo.update_ratings(duration_threshold, batch_size)
-        else:
-            elo.update_ratings(15 * 60 * 1000, 150000)
-        session.close()
-        engine.dispose()
+        try:
+            if duration_threshold > 0 and batch_size > 50000:
+                elo.update_ratings(duration_threshold, batch_size)
+            else:
+                elo.update_ratings(15 * 60 * 1000, 150000)
+        except Exception as e:
+            logger.error(f"Rating Error: {e}")
+            session.rollback()
+        finally:
+            session.close()
+            engine.dispose()
     finally:
         if os.path.exists(LOCK_FILE):
             os.remove(LOCK_FILE)

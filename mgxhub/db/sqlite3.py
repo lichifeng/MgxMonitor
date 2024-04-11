@@ -65,7 +65,7 @@ class SQLite3Factory(metaclass=Singleton):
 
         self._db_engine = create_engine(
             f"sqlite:///{self._db_path}",
-            connect_args={"check_same_thread": False},
+            connect_args={"check_same_thread": False, "timeout": 60},
             echo=(cfg.get('system', 'echosql').lower() == 'on')
         )
         Base.metadata.create_all(self._db_engine)
