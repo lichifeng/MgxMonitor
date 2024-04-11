@@ -37,11 +37,14 @@ async def upload_a_record(
     if s3replace and not WPRestAPI(creds.username, creds.password).need_admin_login(brutal_term=False):
         s3replace = False
 
-    try:
-        lastmod = datetime.fromtimestamp(float(lastmod)).isoformat()
-    except Exception as e:
-        logger.warning(f'Invalid lastmod: {e}')
+    if not lastmod:
         lastmod = datetime.now().isoformat()
+    else:
+        try:
+            lastmod = datetime.fromtimestamp(float(lastmod)).isoformat()
+        except Exception as e:
+            logger.warning(f'Invalid lastmod: {e}')
+            lastmod = datetime.now().isoformat()
 
     session = db()
     processed = FileProcessor(

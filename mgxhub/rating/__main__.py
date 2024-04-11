@@ -1,6 +1,7 @@
 '''Standalone xecutable of elo rating calculator.'''
 
 import argparse
+import fcntl
 import os
 import sys
 import time
@@ -24,22 +25,32 @@ def main(db_path: str, duration_threshold: str, batch_size: str):
         logger.debug("Only one instance of the ELO rating calculator can run at a time. Exiting.")
         sys.exit(1)
 
+    # Create the lock file
+    try:
+        with open(LOCK_FILE, 'x', encoding="ASCII") as file:
+            # Try to lock the file in non-blocking mode
+            fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+            # Other processes can read the lock file to check if the process is still running
+            # Write current PID to the first line
+            pid = os.getpid()
+            file.write(str(pid) + "\n")
+
+            # Write current timestamp to the second line
+            timestamp = int(time.time())
+            file.write(str(timestamp) + "\n")
+    except (BlockingIOError, FileExistsError):
+        logger.debug("Race condition: Another instance of the ELO rating calculator is running. Exiting.")
+        sys.exit(1)
+
     if os.path.exists(LOCK_FILE + ".scheduled"):
         logger.debug("The ELO rating will be processed, remove the scheduled signal.")
-        os.remove(LOCK_FILE + ".scheduled")
+        try:
+            os.remove(LOCK_FILE + ".scheduled")
+        except FileNotFoundError:
+            pass  # Under multi-threading, the scheduled signal may be removed by another thread
 
     start_time = time.time()
-
-    # Create the lock file
-    with open(LOCK_FILE, 'w', encoding="ASCII") as file:
-        # Other processes can read the lock file to check if the process is still running
-        # Write current PID to the first line
-        pid = os.getpid()
-        file.write(str(pid) + "\n")
-
-        # Write current timestamp to the second line
-        timestamp = int(time.time())
-        file.write(str(timestamp) + "\n")
 
     try:
         engine = create_engine(f"sqlite:///{db_path}", echo=False)

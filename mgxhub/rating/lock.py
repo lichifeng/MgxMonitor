@@ -109,7 +109,10 @@ class RatingLock:
 
         scheduled_file = self._lock_file + ".scheduled"
         if not os.path.exists(scheduled_file):
-            with open(scheduled_file, 'x', encoding="ASCII"):
+            try:
+                with open(scheduled_file, 'x', encoding="ASCII"):
+                    pass
+            except FileExistsError:
                 pass
 
     def unlock(self, force=False) -> None:

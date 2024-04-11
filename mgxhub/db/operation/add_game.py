@@ -3,6 +3,7 @@
 from datetime import datetime
 from hashlib import md5
 
+from sqlalchemy import and_
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import Session
 
@@ -106,12 +107,8 @@ def add_game(session: Session, d: dict, t: str | None = None, source: str = "") 
         game_time=game_time
     ))
 
-    player_batch = []
     players = d.get('players')
     if players:
-        # delete old records where game_guid = d.get('guid')
-        session.query(Player).filter(Player.game_guid == d.get('guid')).delete()
-
         for p in players:
             if p.get('name'):
                 sanitized_name = sanitize_playername(p.get('name')) or '<NULL>'
@@ -119,28 +116,32 @@ def add_game(session: Session, d: dict, t: str | None = None, source: str = "") 
                 sanitized_name = '<NULL>'
 
             init_position = p.get('initPosition', [-1, -1])
-            player_batch.append({
-                'game_guid': d.get('guid'),
-                'slot': p.get('slot'),
-                'index_player': p.get('index'),
-                'name': sanitized_name,
-                'name_hash': md5(sanitized_name.encode('utf-8')).hexdigest(),
-                'type': p.get('typeEn'),
-                'team': p.get('team'),
-                'color_index': p.get('colorIndex'),
-                'init_x': init_position[0] if len(init_position) > 0 else -1,
-                'init_y': init_position[1] if len(init_position) > 1 else -1,
-                'disconnected': p.get('disconnected'),
-                'is_winner': p.get('isWinner'),
-                'is_main_operator': p.get('mainOp'),
-                'civ_id': p.get('civilization', {}).get('id'),
-                'civ_name': p.get('civilization', {}).get('nameEn'),
-                'feudal_time': p.get('feudalTime'),
-                'castle_time': p.get('castleTime'),
-                'imperial_time': p.get('imperialTime'),
-                'resigned_time': p.get('resigned')
-            })
-        session.bulk_insert_mappings(Player, player_batch)
+            player = session.query(Player).filter(
+                and_(Player.game_guid == d.get('guid'), Player.slot == p.get('slot'))).first()
+            if player is None:
+                player = Player()
+
+            player.game_guid = d.get('guid')
+            player.slot = p.get('slot')
+            player.index_player = p.get('index')
+            player.name = sanitized_name
+            player.name_hash = md5(sanitized_name.encode('utf-8')).hexdigest()
+            player.type = p.get('typeEn')
+            player.team = p.get('team')
+            player.color_index = p.get('colorIndex')
+            player.init_x = init_position[0] if len(init_position) > 0 else -1
+            player.init_y = init_position[1] if len(init_position) > 1 else -1
+            player.disconnected = p.get('disconnected')
+            player.is_winner = p.get('isWinner')
+            player.is_main_operator = p.get('mainOp')
+            player.civ_id = p.get('civilization', {}).get('id')
+            player.civ_name = p.get('civilization', {}).get('nameEn')
+            player.feudal_time = p.get('feudalTime')
+            player.castle_time = p.get('castleTime')
+            player.imperial_time = p.get('imperialTime')
+            player.resigned_time = p.get('resigned')
+
+            session.add(player)
 
     record_file = File(
         game_guid=d.get('guid'),
