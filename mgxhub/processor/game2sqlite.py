@@ -1,5 +1,7 @@
 '''Save game data to SQLite database'''
 
+import traceback
+
 from sqlalchemy.orm import Session
 
 from mgxhub import logger
@@ -28,7 +30,8 @@ def save_game_sqlite(session: Session, data: dict) -> tuple[str, str]:
         if result[0] in ['success', 'updated']:
             RatingLock().start_calc(schedule=True)
     except Exception as e:
-        logger.error(f'game2sqlite error: {e}')
+        tb = traceback.format_exc()  # 获取异常的详细信息
+        logger.error(f'game2sqlite error: {e}\n{tb}')  # 记录异常的详细信息
         result = 'error', data.get('guid', 'unknown guid')
 
     return result

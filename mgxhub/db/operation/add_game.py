@@ -118,6 +118,7 @@ def add_game(session: Session, d: dict, t: str | None = None, source: str = "") 
             else:
                 sanitized_name = '<NULL>'
 
+            init_position = p.get('initPosition', [-1, -1])
             player_batch.append({
                 'game_guid': d.get('guid'),
                 'slot': p.get('slot'),
@@ -127,8 +128,8 @@ def add_game(session: Session, d: dict, t: str | None = None, source: str = "") 
                 'type': p.get('typeEn'),
                 'team': p.get('team'),
                 'color_index': p.get('colorIndex'),
-                'init_x': p.get('initPosition', [-1, -1])[0],
-                'init_y': p.get('initPosition', [-1, -1])[1],
+                'init_x': init_position[0] if len(init_position) > 0 else -1,
+                'init_y': init_position[1] if len(init_position) > 1 else -1,
                 'disconnected': p.get('disconnected'),
                 'is_winner': p.get('isWinner'),
                 'is_main_operator': p.get('mainOp'),
