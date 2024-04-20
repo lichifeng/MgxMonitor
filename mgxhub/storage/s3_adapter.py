@@ -25,20 +25,20 @@ class S3Adapter:
         secure (str): The secure connection status
     '''
 
-    _endpoint: str = None
-    _accesskey: str = None
-    _secretkey: str = None
-    _region: str = None
+    _endpoint: str | None = None
+    _accesskey: str | None = None
+    _secretkey: str | None = None
+    _region: str | None = None
     _secure: bool = True
-    _bucket: str = None
+    _bucket: str | None = None
     _virtual_host_style = False
     _client = None
 
     def __init__(
             self,
-            endpoint: str = None,
-            accesskey: str = None,
-            secretkey: str = None,
+            endpoint: str | None = None,
+            accesskey: str | None = None,
+            secretkey: str | None = None,
             region: str | None = None,
             bucket: str | None = None,
             secure: str = "on"

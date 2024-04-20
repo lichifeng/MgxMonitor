@@ -4,6 +4,7 @@ from datetime import datetime
 
 from fastapi import Query
 
+from mgxhub import db
 from mgxhub.db.operation import get_close_friends as get_close_friends_in_db
 from webapi import app
 
@@ -19,7 +20,8 @@ async def get_close_friends(player_hash: str, limit: int = Query(100, gt=0)) -> 
     Defined in: `webapi/routers/player_friends.py`
     '''
 
-    players = get_close_friends_in_db(player_hash, limit)
+    session = db()
+    players = get_close_friends_in_db(session, player_hash, limit)
     current_time = datetime.now().isoformat()
 
     return {'players': players, 'generated_at': current_time}

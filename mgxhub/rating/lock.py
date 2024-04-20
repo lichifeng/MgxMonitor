@@ -54,7 +54,9 @@ class RatingLock:
     def lock_file_exists(self) -> bool:
         """Check if the lock file exists."""
 
-        return os.path.exists(self._lock_file)
+        if self._lock_file:
+            return os.path.exists(self._lock_file)
+        return False
 
     def pid_exists(self) -> bool:
         """Check if the PID exists in the system.
@@ -106,6 +108,9 @@ class RatingLock:
 
     def schedule(self) -> None:
         """Create a scheduled signal for the rating calculation process."""
+
+        if not self.lock_file_exists():
+            return
 
         scheduled_file = self._lock_file + ".scheduled"
         if not os.path.exists(scheduled_file):

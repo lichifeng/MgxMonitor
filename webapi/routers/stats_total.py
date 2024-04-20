@@ -75,7 +75,7 @@ async def get_total_stats(background_tasks: BackgroundTasks) -> dict:
 
     session = db()
     if STATS_CACHE['cached']:
-        if (datetime.now() - STATS_CACHE['timestamp']).seconds > 60:
+        if (datetime.now() - STATS_CACHE['timestamp']).seconds > 5:
             background_tasks.add_task(get_total_stats_raw, session)
         return STATS_CACHE['cached']
 
