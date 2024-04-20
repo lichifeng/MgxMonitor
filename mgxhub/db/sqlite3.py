@@ -5,7 +5,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from mgxhub import cfg, logger
+from mgxhub import cfg
 from mgxhub.model.orm import Base
 from mgxhub.singleton import Singleton
 
@@ -70,4 +70,4 @@ class SQLite3Factory(metaclass=Singleton):
         )
         Base.metadata.create_all(self._db_engine)
         self._db_sessionlocal = sessionmaker(autocommit=False, autoflush=False, bind=self._db_engine)
-        logger.debug(f"SQLite prepared: {self._db_path}")
+        print(f"SQLite prepared: {self._db_path}")

@@ -1,4 +1,21 @@
-'''Used to watch the work directory for new files and process them'''
+'''Used to watch the queue and process tasks in it.
+
+I tried to monitor a directory for new files and process them. But there's a
+problem with the the solution. When a file is being written to the directory,
+the watcher will try to process it. This will cause an error because the file is
+not yet complete. Adding a delay before processing the file will make the
+process slow. Solutions like **pyinotify** or **watchdog** makes the process
+complex.
+
+**Watcher** is hence not a good idea I think.
+
+My solution is limiting the file input to an API endpoint, upload files with
+SFTP or other methods are not considered. When a file is uploaded, the API will
+add a task to a queue. Workers will then process the tasks in the queue.
+
+Under this design, files in upload dir should only from _decompress() of
+`proc_compressed.py`.
+'''
 
 import atexit
 import fcntl
@@ -6,16 +23,15 @@ import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from queue import Queue
 
-from mgxhub.config import cfg
-from mgxhub.db import db
-from mgxhub.logger import logger
+from mgxhub import cfg, db, logger, proc_queue
 from mgxhub.processor import FileProcessor
+
+from .scanner import scan
 
 
 class RecordWatcher:
-    '''Watches the work directory for new files and processes them'''
+    '''Watches the queue and process tasks in it.'''
 
     def __init__(self, max_workers=4):
         '''Initialize the watcher'''
@@ -35,12 +51,14 @@ class RecordWatcher:
         self.work_dir = cfg.get('system', 'uploaddir')
         os.makedirs(self.work_dir, exist_ok=True)
 
+        scan(self.work_dir)
+
         if self.work_dir and os.path.isdir(self.work_dir):
-            self.file_queue = Queue()
+            self.q = proc_queue
             self.max_workers = max_workers
             self.thread = threading.Thread(target=self._watch, daemon=True)
             self.thread.start()
-            logger.info(f"[Watcher] Monitoring directory: {self.work_dir}")
+            logger.info("[Watcher] Monitoring queue...")
 
     def _remove_lock_file(self):
         '''Remove the lock file'''
@@ -52,10 +70,9 @@ class RecordWatcher:
         '''Watch the work directory for new files and process them'''
         while True:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                self._scan(self.work_dir)
-                while not self.file_queue.empty():
-                    file_path = self.file_queue.get()
-                    executor.submit(self._process_file, file_path)
+                while not self.q.empty():
+                    task_path = self.q.get()
+                    executor.submit(self._process_file, task_path)
             time.sleep(1)
 
     def _process_file(self, file_path):
@@ -67,24 +84,16 @@ class RecordWatcher:
             logger.debug(f"[Watcher] {file_path}: {file_processor.result().get('status', 'unknown')}")
             if os.path.isfile(file_path):
                 os.remove(file_path)
+
             # Try remove parent directory if it is empty
-            try:
-                os.rmdir(os.path.dirname(file_path))
-            except OSError:
-                pass
+            parentdir = os.path.dirname(file_path)
+            if os.path.isdir(parentdir) and not os.listdir(parentdir):
+                try:
+                    os.rmdir(parentdir)
+                except OSError:
+                    pass
         except Exception as e:
             logger.error(f"[Watcher] Error [{file_path}]: {e}")
-            # This exception may due to unfinished file writing, so we wait for a while
-            time.sleep(2)
-            return
         finally:
+            self.q.task_done()
             session.close()
-
-    def _scan(self, dirpath: str):
-        for root, dirs, files in os.walk(dirpath):
-            for filename in files:
-                file_path = os.path.join(root, filename)
-                self.file_queue.put(file_path)
-            for inner_dir in dirs:
-                inner_path = os.path.join(root, inner_dir)
-                self._scan(inner_path)

@@ -3,7 +3,6 @@
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.orm import Session
 
-from mgxhub import db
 from mgxhub.model.orm import Rating
 
 # pylint: disable=not-callable

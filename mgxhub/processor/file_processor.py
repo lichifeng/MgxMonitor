@@ -112,12 +112,11 @@ class FileProcessor:
             logger.debug(f'Proc(record): {self._filepath}')
             self._output = process_record(self._session, self._filepath, self._syncproc,
                                           '-b', self._s3replace, self._cleanup)
-
-        if fileext in ACCEPTED_COMPRESSED_TYPES:
+        elif fileext in ACCEPTED_COMPRESSED_TYPES:
             logger.debug(f'Proc(compressed): {self._filepath}')
             self._output = process_compressed(self._filepath, self._cleanup)
-
-        return {'status': 'invalid', 'message': 'unsupported file type'}
+        else:
+            self._output = {'status': 'invalid', 'message': 'unsupported file type'}
 
     def result(self) -> dict:
         '''Return the processing result.'''

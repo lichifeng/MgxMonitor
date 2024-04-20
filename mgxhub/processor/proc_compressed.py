@@ -7,6 +7,7 @@ import threading
 import patoolib
 
 from mgxhub import cfg, logger
+from mgxhub.watcher.scanner import scan
 
 from .allowed_types import ACCEPTED_COMPRESSED_TYPES
 from .move2error import move_to_error
@@ -16,6 +17,7 @@ def _decompress(filepath: str, cleanup: bool = True) -> True:
     with tempfile.TemporaryDirectory(prefix='unzip_', dir=cfg.get('system', 'uploaddir'), delete=False) as temp_dir:
         try:
             patoolib.extract_archive(filepath, outdir=temp_dir, interactive=False, verbosity=-1)
+            scan(temp_dir)
             if cleanup and os.path.exists(filepath):
                 os.remove(filepath)
             return True
