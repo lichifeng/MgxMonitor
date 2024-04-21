@@ -33,6 +33,7 @@ class S3Adapter:
     _bucket: str | None = None
     _virtual_host_style = False
     _client = None
+    _set_policy: bool = False
 
     def __init__(
             self,
@@ -41,7 +42,8 @@ class S3Adapter:
             secretkey: str | None = None,
             region: str | None = None,
             bucket: str | None = None,
-            secure: str = "on"
+            secure: str = "on",
+            setpolicy: bool = False
     ):
         '''Initialize the S3Adapter instance
 
@@ -55,6 +57,7 @@ class S3Adapter:
         self._region = region
         self._bucket = bucket
         self._secure = secure.lower() != "off"
+        self._set_policy = setpolicy
 
         if not self._endpoint or not self._accesskey or not self._secretkey:
             raise ValueError('Missing S3 endpoint || access key || secret key')
@@ -81,24 +84,25 @@ class S3Adapter:
             self._bucket = self._endpoint.split('.')[0]
             self._virtual_host_style = True
 
-        _public_read_policy = {
-            "Version": '2012-10-17',
-            "Statement": [
-                {
-                    "Sid": 'AddPublicReadCannedAcl',
-                    "Principal": '*',
-                    "Effect": 'Allow',
-                    "Action": ['s3:GetObject'],
-                    "Resource": [f"arn:aws:s3:::{self._bucket}/*"]
-                }
-            ]
-        }
-
         found = self._client.bucket_exists(self._bucket)
         if not found:
             logger.warning(f'[S3] Creating bucket {self._bucket}')
             self._client.make_bucket(self._bucket)
-        self._client.set_bucket_policy(self._bucket, json.dumps(_public_read_policy))
+
+        if self._set_policy:
+            _public_read_policy = {
+                "Version": '2012-10-17',
+                "Statement": [
+                    {
+                        "Sid": 'AddPublicReadCannedAcl',
+                        "Principal": '*',
+                        "Effect": 'Allow',
+                        "Action": ['s3:GetObject'],
+                        "Resource": [f"arn:aws:s3:::{self._bucket}/*"]
+                    }
+                ]
+            }
+            self._client.set_bucket_policy(self._bucket, json.dumps(_public_read_policy))
 
     def have(self, file_path: str) -> bool:
         '''Check if a file exists in the server.
