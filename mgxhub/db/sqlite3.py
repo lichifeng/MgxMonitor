@@ -65,8 +65,11 @@ class SQLite3Factory(metaclass=Singleton):
 
         self._db_engine = create_engine(
             f"sqlite:///{self._db_path}",
-            connect_args={"check_same_thread": False, "timeout": 60},
-            echo=(cfg.get('system', 'echosql').lower() == 'on')
+            connect_args={"check_same_thread": False, "timeout": 30},
+            echo=(cfg.get('system', 'echosql').lower() == 'on'),
+            max_overflow=10,
+            pool_size=20,
+            pool_recycle=20
         )
         Base.metadata.create_all(self._db_engine)
         self._db_sessionlocal = sessionmaker(autocommit=False, autoflush=False, bind=self._db_engine)

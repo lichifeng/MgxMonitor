@@ -37,7 +37,7 @@ class DefaultConfig:
         # Map configuration
         self.config['system']['mapdest'] = 'local'
         self.config['system']['mapdir'] = os.path.join(self.config['system']['workdir'], 'map')
-        self.config['system']['mapdirS3'] = '/maps/'
+        self.config['system']['mapdirS3'] = 'maps/'
 
         # Database configuration
         self.config['database'] = {}
@@ -52,7 +52,7 @@ class DefaultConfig:
             'region': 'us-east-1',
             'secure': 'on',  # 'on' or 'off'
             'bucket': 'mgxhub-test-bucket',
-            'recorddir': '/records/'
+            'recorddir': 'records/'
         }
 
         # Rating configuration
