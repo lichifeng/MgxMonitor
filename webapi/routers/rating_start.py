@@ -7,7 +7,7 @@ from mgxhub.rating import RatingLock
 from webapi.admin_api import admin_api
 
 
-@admin_api.get("/rating/start")
+@admin_api.get("/rating/start", tags=['rating'])
 async def start_rating_calc(
     batch_size: str | None = None,
     duration_threshold: str | None = None,

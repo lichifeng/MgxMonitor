@@ -5,9 +5,8 @@ from hashlib import md5
 
 from fastapi import BackgroundTasks, Query
 from sqlalchemy import func, select, text
-from sqlalchemy.orm import Session
 
-from mgxhub import db
+from mgxhub.db import db_raw
 from mgxhub.model.orm import Player
 from webapi import app
 
@@ -16,7 +15,7 @@ from webapi import app
 RANDOM_CACHE = {"cached": None, "lock": False}
 
 
-def _get_rand_players(session: Session, threshold: int, limit: int) -> None:
+def _get_rand_players(threshold: int, limit: int) -> None:
     '''Fetch random players and their game counts
 
     Including total games of each player. Used mainly in player cloud.
@@ -47,6 +46,7 @@ def _get_rand_players(session: Session, threshold: int, limit: int) -> None:
         threshold=threshold
     ).subquery()
 
+    session = db_raw()
     query = session.query(
         subquery.c.name,
         subquery.c.game_count
@@ -62,11 +62,13 @@ def _get_rand_players(session: Session, threshold: int, limit: int) -> None:
         row.game_count
     ] for row in result]
 
+    session.close()
+
     RANDOM_CACHE['cached'] = players
     RANDOM_CACHE['lock'] = False
 
 
-@app.get("/player/random")
+@app.get("/player/random", tags=['player'])
 async def get_rand_players(
     background_tasks: BackgroundTasks,
     threshold: int = Query(10, gt=0),
@@ -86,16 +88,15 @@ async def get_rand_players(
     Defined in: `webapi/routers/player_random.py`
     '''
 
-    session = db()
     current_time = datetime.now().isoformat()
     if RANDOM_CACHE['cached']:
-        background_tasks.add_task(_get_rand_players, session, threshold, limit)
+        background_tasks.add_task(_get_rand_players, threshold, limit)
         return {
             'players': RANDOM_CACHE['cached'],
             'generated_at': current_time
         }
 
-    _get_rand_players(session, threshold, limit)
+    _get_rand_players(threshold, limit)
     return {
         'players': RANDOM_CACHE['cached'],
         'generated_at': current_time

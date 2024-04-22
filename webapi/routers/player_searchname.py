@@ -2,20 +2,22 @@
 
 from datetime import datetime
 
-from fastapi import Query
+from fastapi import Depends, Query
+from sqlalchemy.orm import Session
 
-from mgxhub import db
+from mgxhub.db import db_dep
 from mgxhub.db.operation import search_players_by_name
 from webapi import app
 
 
-@app.get("/player/searchname")
+@app.get("/player/searchname", tags=['player'])
 async def search_player_by_name(
     player_name: str,
     stype: str = 'std',
     orderby: str = 'nad',
     page: int = Query(1, ge=1),
-    page_size: int = Query(100, ge=1)
+    page_size: int = Query(100, ge=1),
+    db: Session = Depends(db_dep)
 ) -> dict:
     '''Search player by name
 
@@ -29,8 +31,7 @@ async def search_player_by_name(
     Defined in: `webapi/routers/player_searchname.py`
     '''
 
-    session = db()
-    result = search_players_by_name(session, player_name, stype, orderby, page, page_size)
+    result = search_players_by_name(db, player_name, stype, orderby, page, page_size)
     current_time = datetime.now().isoformat()
 
     return {'players': result, 'generated_at': current_time}

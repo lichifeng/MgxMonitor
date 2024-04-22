@@ -10,19 +10,6 @@ from mgxhub.model.orm import Base
 from mgxhub.singleton import Singleton
 
 
-class SQLite3:
-    '''Provide a SQLAlchemy session.'''
-
-    def __init__(self, session: Session):
-        self.session = session
-
-    def __call__(self) -> Session:
-        return self.session
-
-    def __del__(self):
-        self.session.close()
-
-
 class SQLite3Factory(metaclass=Singleton):
     '''Establish a SQLite3 connection and provide a SQLAlchemy session.'''
 
@@ -47,10 +34,10 @@ class SQLite3Factory(metaclass=Singleton):
         if self._db_engine:
             self._db_engine.dispose()
 
-    def __call__(self, db_path: str | None = None) -> SQLite3:
+    def __call__(self, db_path: str | None = None) -> Session:
         if db_path is not None:
             self.prepare(db_path)
-        return SQLite3(self._db_sessionlocal())
+        return self._db_sessionlocal()
 
     def prepare(self, db_path: str | None = None) -> None:
         '''Prepare a database engine.

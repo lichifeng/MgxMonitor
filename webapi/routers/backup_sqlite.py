@@ -10,7 +10,7 @@ from mgxhub.util.backup import sqlite3backup
 from webapi.admin_api import admin_api
 
 
-@admin_api.get("/system/backup/sqlite")
+@admin_api.get("/system/backup/sqlite", tags=['system'])
 async def backup_sqlite(background_tasks: BackgroundTasks) -> dict:
     '''Backup SQLite3 database
 

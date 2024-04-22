@@ -6,7 +6,7 @@ from mgxhub.rating import RatingLock
 from webapi.admin_api import admin_api
 
 
-@admin_api.get("/rating/unlock")
+@admin_api.get("/rating/unlock", tags=['rating'])
 async def unlock_rating(force: bool = False) -> dict:
     '''Unlock rating lock or stop rating calculation by force
 

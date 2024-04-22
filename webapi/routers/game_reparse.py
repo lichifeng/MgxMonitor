@@ -6,7 +6,8 @@ from fastapi import BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from mgxhub import cfg, db
+from mgxhub import cfg
+from mgxhub.db import db_raw
 from mgxhub.model.orm import File
 from mgxhub.processor import FileProcessor
 from mgxhub.storage import S3Adapter
@@ -30,7 +31,7 @@ def _reparse(session: Session, guid: str) -> None:
             )
 
 
-@admin_api.get("/game/reparse")
+@admin_api.get("/game/reparse", tags=['game'])
 async def reparse_a_record(background_tasks: BackgroundTasks, guid: str) -> dict:
     '''Reparse a record file to update its information.
 
@@ -41,7 +42,7 @@ async def reparse_a_record(background_tasks: BackgroundTasks, guid: str) -> dict
     Defined in: `webapi/routers/game_reparse.py`
     '''
 
-    session = db()
+    session = db_raw()
     background_tasks.add_task(_reparse, session, guid)
 
     return JSONResponse(status_code=202, content={"detail": f"Reparse command sent for [{guid}]"})

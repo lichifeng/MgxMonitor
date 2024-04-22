@@ -1,15 +1,17 @@
 '''Delete a game from the database'''
 
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 
-from mgxhub import db, logger
+from mgxhub import logger
+from mgxhub.db import db_dep
 from mgxhub.model.orm import Chat, File, Game, LegacyInfo, Player
 from webapi.admin_api import admin_api
 
 
-@admin_api.get("/game/delete")
-async def delete_game(guid: str) -> dict:
+@admin_api.get("/game/delete", tags=['game'])
+async def delete_game(guid: str, db: Session = Depends(db_dep)) -> dict:
     '''Delete a game from the database.
 
     - **guid**: The GUID of the game.
@@ -17,15 +19,14 @@ async def delete_game(guid: str) -> dict:
     Defined in: `webapi/routers/game_delete.py`
     '''
 
-    session = db()
-    game = session.query(Game).filter(Game.game_guid == guid).first()
+    game = db.query(Game).filter(Game.game_guid == guid).first()
     if game:
-        session.query(Player).filter(Player.game_guid == guid).delete()
-        session.query(Chat).filter(Chat.game_guid == guid).delete()
-        session.query(File).filter(File.game_guid == guid).delete()
-        session.query(LegacyInfo).filter(LegacyInfo.game_guid == guid).delete()
-        session.delete(game)
-        session.commit()
+        db.query(Player).filter(Player.game_guid == guid).delete()
+        db.query(Chat).filter(Chat.game_guid == guid).delete()
+        db.query(File).filter(File.game_guid == guid).delete()
+        db.query(LegacyInfo).filter(LegacyInfo.game_guid == guid).delete()
+        db.delete(game)
+        db.commit()
         logger.info(f"[DB] Delete: {guid}")
         return JSONResponse(status_code=200, content={"detail": f"Game [{guid}] deleted"})
 

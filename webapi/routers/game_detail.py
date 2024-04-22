@@ -1,16 +1,18 @@
 '''Get details for a game by its GUID.'''
 
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy import asc
+from sqlalchemy.orm import Session
 
-from mgxhub import db, logger
+from mgxhub import logger
+from mgxhub.db import db_dep
 from mgxhub.model.orm import Chat, File, Game, Player
 from mgxhub.model.webapi import GameDetail
 from webapi import app
 
 
-@app.get("/game/detail")
-async def get_game(guid: str, lang: str = 'en') -> GameDetail | None:
+@app.get("/game/detail", tags=['game'])
+async def get_game(guid: str, lang: str = 'en', db: Session = Depends(db_dep)) -> GameDetail | None:
     '''Get details for a game by its GUID
 
     - **guid**: GUID of the game.
@@ -19,14 +21,13 @@ async def get_game(guid: str, lang: str = 'en') -> GameDetail | None:
     Defined in: `webapi/routers/game_detail.py`
     '''
 
-    session = db()
-    game_basic = session.query(Game).filter(Game.game_guid == guid).first()
+    game_basic = db.query(Game).filter(Game.game_guid == guid).first()
     if game_basic is None:
         raise HTTPException(status_code=404, detail=f"Game profile [{guid}] not found")
 
-    player_data = session.query(Player).filter(Player.game_guid == guid).all()
-    file_data = session.query(File).filter(File.game_guid == guid).limit(10).all()
-    chat_data = session.query(Chat.chat_time, Chat.chat_content)\
+    player_data = db.query(Player).filter(Player.game_guid == guid).all()
+    file_data = db.query(File).filter(File.game_guid == guid).limit(10).all()
+    chat_data = db.query(Chat.chat_time, Chat.chat_content)\
         .filter(Chat.game_guid == guid)\
         .group_by(Chat.chat_time, Chat.chat_content)\
         .order_by(asc(Chat.chat_time))\

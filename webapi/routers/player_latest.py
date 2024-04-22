@@ -5,7 +5,7 @@ from datetime import datetime
 
 from fastapi import BackgroundTasks
 
-from mgxhub import db
+from mgxhub.db import db_raw
 from mgxhub.db.operation import get_latest_players
 from webapi import app
 
@@ -14,7 +14,16 @@ from webapi import app
 PLAYERS_CACHE: list[list, float] = [[], 0]  # [cache, last_updated_time]
 
 
-@app.get("/player/latest")
+def latest_players_wrapper(limit: int = 20) -> dict:
+    '''Fetch latest N players and their simple stats.'''
+
+    db = db_raw()
+    result = get_latest_players(db, limit)
+    db.close()
+    return result
+
+
+@app.get("/player/latest", tags=['player'])
 async def get_new_players(background_tasks: BackgroundTasks, limit: int = 20) -> dict:
     '''Newly found players.
 
@@ -30,16 +39,16 @@ async def get_new_players(background_tasks: BackgroundTasks, limit: int = 20) ->
 
     min_limit = max(limit, 150)
 
-    session = db()
     if PLAYERS_CACHE[0] and len(PLAYERS_CACHE[0]) >= limit:
         if PLAYERS_CACHE[1] and (datetime.now().timestamp() - PLAYERS_CACHE[1] > 300):
-            background_tasks.add_task(get_latest_players, session, min_limit)
+            background_tasks.add_task(latest_players_wrapper, min_limit)
+
         return {
             'players': PLAYERS_CACHE[0][:limit],
             'generated_at': current_time
         }
 
-    PLAYERS_CACHE[0] = get_latest_players(session, min_limit)
+    PLAYERS_CACHE[0] = latest_players_wrapper(min_limit)
     PLAYERS_CACHE[1] = datetime.now().timestamp()
 
     return {'players': PLAYERS_CACHE[0], 'generated_at': current_time}

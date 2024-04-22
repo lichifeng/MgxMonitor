@@ -6,7 +6,7 @@ from mgxhub.util import TmpCleaner
 from webapi.admin_api import admin_api
 
 
-@admin_api.get("/system/tmpdir/purge")
+@admin_api.get("/system/tmpdir/purge", tags=['system'])
 async def purge_tmpdirs() -> dict:
     '''Purge all temporary directories created by mgxhub
 

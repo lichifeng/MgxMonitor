@@ -8,7 +8,7 @@ from mgxhub.db.operation import get_player_recent_games
 from webapi import app
 
 
-@app.get("/player/recent_games")
+@app.get("/player/recent_games", tags=['player'])
 async def get_player_games(player_hash: str, page: int = Query(1, ge=1), page_size: int = Query(50, ge=1)) -> dict:
     '''Get recent games of a player
 

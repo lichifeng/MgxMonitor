@@ -8,7 +8,7 @@ from mgxhub.config import DefaultConfig
 from webapi.admin_api import admin_api
 
 
-@admin_api.get("/system/config/default", response_class=PlainTextResponse)
+@admin_api.get("/system/config/default", response_class=PlainTextResponse, tags=['system'])
 async def download_default_config() -> str:
     '''Download default configuration file
 

@@ -4,7 +4,7 @@ from mgxhub.auth import LOGGED_IN_CACHE
 from webapi.admin_api import admin_api
 
 
-@admin_api.get("/auth/logoutall")
+@admin_api.get("/auth/logoutall", tags=['auth'])
 async def logout_all_users() -> dict:
     '''Logout all users
 

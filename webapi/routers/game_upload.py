@@ -4,21 +4,24 @@ from datetime import datetime
 
 from fastapi import Depends, File, Form, UploadFile
 from fastapi.security import HTTPBasicCredentials
+from sqlalchemy.orm import Session
 
-from mgxhub import db, logger
+from mgxhub import logger
 from mgxhub.auth import WPRestAPI
+from mgxhub.db import db_dep
 from mgxhub.processor import FileProcessor
 from webapi import app
 from webapi.authdepends import security
 
 
-@app.post("/game/upload")
+@app.post("/game/upload", tags=['game'])
 async def upload_a_record(
     recfile: UploadFile = File(...),
     lastmod: str = Form(''),
     s3replace: bool = Form(False),
     cleanup: bool = Form(True),
-    creds: HTTPBasicCredentials = Depends(security)
+    creds: HTTPBasicCredentials = Depends(security),
+    db: Session = Depends(db_dep)
 ):
     '''Upload a record file to the server.
 
@@ -46,9 +49,8 @@ async def upload_a_record(
             logger.warning(f'Invalid lastmod: {e}')
             lastmod = datetime.now().isoformat()
 
-    session = db()
     processed = FileProcessor(
-        session,
+        db,
         recfile.file,
         syncproc=False,
         s3replace=s3replace,

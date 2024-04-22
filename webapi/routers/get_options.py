@@ -1,17 +1,18 @@
 '''Get option values like 1v1, 2v2, 3v3, AOC10, AOC10C, etc.'''
 
+from fastapi import Depends
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
-from mgxhub import db
+from mgxhub.db import db_dep
 from mgxhub.model.orm import Game
 from webapi import app
 
 # pylint: disable=not-callable
 
 
-@app.get("/optionvalues")
-async def get_option_values() -> dict:
+@app.get("/optionvalues", tags=['game'])
+async def get_option_values(session: Session = Depends(db_dep)) -> dict:
     '''Get option values like 1v1, 2v2, 3v3, AOC10, AOC10C, etc.
 
     Returns:
@@ -27,7 +28,6 @@ async def get_option_values() -> dict:
             column
         ).order_by(desc('count')).all()
 
-    session = db()
     matchups = get_counts(session, Game.matchup)
     versions = get_counts(session, Game.version_code)
     mapsizes = get_counts(session, Game.map_size)

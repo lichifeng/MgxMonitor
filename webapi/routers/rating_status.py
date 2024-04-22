@@ -4,7 +4,7 @@ from mgxhub.rating import RatingLock
 from webapi import app
 
 
-@app.get("/rating/status")
+@app.get("/rating/status", tags=['rating'])
 async def get_rating_status() -> dict:
     '''Get status of the rating calculation process
 

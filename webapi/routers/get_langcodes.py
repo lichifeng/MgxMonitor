@@ -6,7 +6,7 @@ from mgxhub import cfg
 from webapi import app
 
 
-@app.get("/system/langcodes")
+@app.get("/system/langcodes", tags=['system'])
 async def get_langcodes() -> dict[str, list]:
     '''Get available language codes and their names
 

@@ -1,22 +1,24 @@
 '''Search player names by keyword in ratings table'''
 
-from fastapi import Query
+from fastapi import Depends, Query
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
-from mgxhub import db
+from mgxhub.db import db_dep
 from mgxhub.model.orm import Rating
 from webapi import app
 
 # pylint: disable=not-callable
 
 
-@app.get("/rating/searchname")
+@app.get("/rating/searchname", tags=['rating'])
 async def get_player_name_by_hash(
         keyword: str,
         version_code: str = 'AOC10',
         matchup: str = 'team',
         page: int = Query(1, ge=1),
-        page_size: int = Query(1, ge=1)
+        page_size: int = Query(1, ge=1),
+        session: Session = Depends(db_dep)
 ) -> dict:
     '''Search player names by keyword in ratings table.
 
@@ -29,7 +31,6 @@ async def get_player_name_by_hash(
     Defined in: `webapi/routers/rating_searchname.py`
     '''
 
-    session = db()
     names = session.query(
         Rating.name,
         Rating.name_hash,

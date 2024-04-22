@@ -2,18 +2,23 @@
 
 from datetime import datetime
 
-from fastapi import Query
+from fastapi import Depends, Query
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
-from mgxhub import db
+from mgxhub.db import db_dep
 from mgxhub.model.orm import Game
 from webapi import app
 
 # pylint: disable=E1102
 
 
-@app.get("/game/random")
-async def fetch_rand_games(threshold: int = Query(10, gt=0), limit: int = Query(50, gt=0)) -> dict:
+@app.get("/game/random", tags=['game'])
+async def fetch_rand_games(
+    threshold: int = Query(10, gt=0),
+    limit: int = Query(50, gt=0),
+    db: Session = Depends(db_dep)
+) -> dict:
     '''Fetch random games
 
     - **threshold**: Minimum duration of the game, in minutes. Default is 10.
@@ -22,8 +27,7 @@ async def fetch_rand_games(threshold: int = Query(10, gt=0), limit: int = Query(
     Defined in: `webapi/routers/game_random.py`
     '''
 
-    session = db()
-    result = session.query(
+    result = db.query(
         Game.game_guid, Game.version_code,
         Game.created, Game.map_name, Game.matchup,
         Game.duration, Game.speed

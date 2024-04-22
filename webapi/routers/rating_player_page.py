@@ -2,18 +2,22 @@
 
 from datetime import datetime
 
-from mgxhub import db
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+from mgxhub.db import db_dep
 from mgxhub.db.operation import get_player_rating_table
 from webapi import app
 
 
-@app.get("/rating/playerpage")
+@app.get("/rating/playerpage", tags=['rating'])
 async def player_rating_page(
     player_hash: str,
     version_code: str = 'AOC10',
     matchup: str = 'team',
     order: str = 'desc',
-    page_size: int = 100
+    page_size: int = 100,
+    db: Session = Depends(db_dep)
 ) -> dict:
     '''Fetch rating of a player
 
@@ -33,8 +37,7 @@ async def player_rating_page(
     Defined in: `webapi/routers/rating_player_page.py`
     '''
 
-    session = db()
-    ratingpage = get_player_rating_table(session, player_hash, version_code, matchup, order, page_size)
+    ratingpage = get_player_rating_table(db, player_hash, version_code, matchup, order, page_size)
     current_time = datetime.now().isoformat()
 
     return {'ratings': ratingpage[0], 'total': ratingpage[1], 'generated_at': current_time}

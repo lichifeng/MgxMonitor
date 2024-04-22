@@ -24,7 +24,8 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from mgxhub import cfg, db, logger, proc_queue
+from mgxhub import cfg, logger, proc_queue
+from mgxhub.db import db_raw
 from mgxhub.processor import FileProcessor
 
 from .scanner import scan
@@ -78,7 +79,7 @@ class RecordWatcher:
     def _process_file(self, file_path):
         '''Process the file'''
 
-        session = db()
+        session = db_raw()
         try:
             file_processor = FileProcessor(session, file_path, syncproc=True, s3replace=False, cleanup=True)
             logger.debug(f"[Watcher] {file_path}: {file_processor.result().get('status', 'unknown')}")
