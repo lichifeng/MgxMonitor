@@ -13,5 +13,6 @@ from .get_player_recent_games import (async_get_player_recent_games,
                                       get_player_recent_games)
 from .get_rating_stats import get_rating_stats
 from .get_rating_table import get_rating_table
+from .get_total_stats import get_total_stats_raw, get_total_stats_raw_async
 from .search_games import search_games
 from .search_player_name import search_players_by_name

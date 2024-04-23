@@ -186,3 +186,15 @@ class Rating(Base):
     lowest = Column(Integer)
     first_played = Column(DateTime)
     last_played = Column(DateTime)
+
+
+class Cache(Base):
+    '''Store cache'''
+
+    __tablename__ = 'cache'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    updated = Column(DateTime, server_default=func.now())
+    key = Column(String(255), unique=True)
+    value = Column(Text)
+    tag = Column(String(255))

@@ -9,7 +9,7 @@ from mgxhub.model.orm import Rating
 
 
 def get_rating_table(
-    session: Session,
+    db: Session,
     version_code: str = 'AOC10',
     matchup: str = '1v1',
     order: str = 'desc',
@@ -31,7 +31,7 @@ def get_rating_table(
     if page < 0 or page_size < 1:
         return []
 
-    ratings = session.query(
+    ratings = db.query(
         func.row_number().over(order_by=order_method(Rating.rating)).label('rownum'),
         Rating.name,
         Rating.name_hash,
@@ -55,7 +55,7 @@ def get_rating_table(
         page * page_size
     ).all()
 
-    ratings_count = session.query(
+    ratings_count = db.query(
         func.count(Rating.rating)
     ).filter(
         Rating.version_code == version_code,
