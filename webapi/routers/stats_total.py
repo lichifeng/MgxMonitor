@@ -26,7 +26,7 @@ async def get_total_stats(db: Session = Depends(db_dep)) -> str:
 
     cached = cacher.get('total_stats')
     if cached:
-        return Response(content=cached, media_type="application/json")
+        return Response(content=cached, media_type="application/json", headers={"X-From-Cache": "true"})
 
     stats = get_total_stats_raw(db)
     result = json.dumps(jsonable_encoder(stats))

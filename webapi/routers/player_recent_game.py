@@ -2,14 +2,21 @@
 
 from datetime import datetime
 
-from fastapi import Query
+from fastapi import Depends, Query
+from sqlalchemy.orm import Session
 
+from mgxhub.db import db_dep
 from mgxhub.db.operation import get_player_recent_games
 from webapi import app
 
 
 @app.get("/player/recent_games", tags=['player'])
-async def get_player_games(player_hash: str, page: int = Query(1, ge=1), page_size: int = Query(50, ge=1)) -> dict:
+async def get_player_games(
+    player_hash: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1),
+    db: Session = Depends(db_dep)
+) -> dict:
     '''Get recent games of a player
 
     Args:
@@ -20,7 +27,7 @@ async def get_player_games(player_hash: str, page: int = Query(1, ge=1), page_si
     Defined in: `webapi/routers/player_recent_game.py`
     '''
 
-    games = get_player_recent_games(player_hash, page_size, (page - 1) * page_size)
+    games = get_player_recent_games(db, player_hash, page_size, (page - 1) * page_size)
 
     current_time = datetime.now().isoformat()
 

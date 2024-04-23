@@ -25,7 +25,7 @@ async def get_rating_meta(db: Session = Depends(db_dep)) -> str:
     cacher = Cacher(db)
     cached = cacher.get('rating_stats')
     if cached:
-        return Response(content=cached, media_type="application/json")
+        return Response(content=cached, media_type="application/json", headers={"X-From-Cache": "true"})
 
     current_time = datetime.now().isoformat()
     result = json.dumps(jsonable_encoder({'stats': get_rating_stats(db), 'generated_at': current_time}))

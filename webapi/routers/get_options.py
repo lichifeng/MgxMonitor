@@ -28,7 +28,7 @@ async def get_option_values(session: Session = Depends(db_dep)) -> dict:
     cacher = Cacher(session)
     cached = cacher.get('option_values')
     if cached:
-        return Response(content=cached, media_type="application/json")
+        return Response(content=cached, media_type="application/json", headers={"X-From-Cache": "true"})
 
     def get_counts(session: Session, column):
         return session.query(

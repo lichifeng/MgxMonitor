@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from mgxhub.model.orm import Game, Player
 
 
-def get_player_recent_games(session: Session, name_hash: str, limit: int = 50, offset: int = 0) -> list:
+def get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset: int = 0) -> list:
     '''Get recent games of a player.
 
     Args:
@@ -16,7 +16,7 @@ def get_player_recent_games(session: Session, name_hash: str, limit: int = 50, o
     Defined in: `mgxhub/db/operation/get_player_recent_games.py`
     '''
 
-    recent_games = session.query(Game, Player.rating_change)\
+    recent_games = db.query(Game, Player.rating_change)\
         .join(Player, Game.game_guid == Player.game_guid)\
         .filter(Player.name_hash == name_hash)\
         .order_by(desc(Game.game_time))\
@@ -27,7 +27,7 @@ def get_player_recent_games(session: Session, name_hash: str, limit: int = 50, o
     return [(g.game_guid, g.version_code, g.map_name, g.matchup, g.duration, g.game_time, p) for g, p in recent_games]
 
 
-async def async_get_player_recent_games(session: Session, name_hash: str, limit: int = 50, offset: int = 0) -> list:
+async def async_get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset: int = 0) -> list:
     '''Async version of fetch_player_recent_games()'''
 
-    return get_player_recent_games(session, name_hash, limit, offset)
+    return get_player_recent_games(db, name_hash, limit, offset)

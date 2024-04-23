@@ -31,7 +31,7 @@ async def fetch_homepage_data(
     cacher = Cacher(db)
     cached = cacher.get(cache_key)
     if cached:
-        return Response(content=cached, media_type="application/json")
+        return Response(content=cached, media_type="application/json", headers={"X-From-Cache": "true"})
 
     results = await asyncio.gather(
         fetch_latest_games_async(db, glimit),

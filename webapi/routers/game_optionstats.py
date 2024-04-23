@@ -27,7 +27,7 @@ async def get_game_option_stats(db: Session = Depends(db_dep)) -> str:
 
     cached = cacher.get('game_option_stats')
     if cached:
-        return Response(content=cached, media_type="application/json")
+        return Response(content=cached, media_type="application/json", headers={"X-From-Cache": "true"})
 
     def get_distinct_values(column):
         return db.query(column).distinct().all()
