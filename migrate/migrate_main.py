@@ -8,21 +8,24 @@ from datetime import datetime
 
 import requests
 from pymongo import MongoClient
-from sqlalchemy import Column, DateTime, Integer, String, create_engine
+from sqlalchemy import Column, DateTime, Integer, String, create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from tqdm import tqdm
 
-MONGO_URI = 'mongodb://mongo_2sar8m:mongo_cMKpkK@localhost/'
+MONGO_URI = 'mongodb://0yfxxq3s1f:bd68bb42fc@localhost/'
 RECORDS_DIR = '/records'
-API_URL = 'https://aocrecapi.dl.y2b.cc/game/upload'
-API_URL_SERVER_STATUS = 'https://aocrecapi.dl.y2b.cc/'
-SERVER_SAPCE_LIMIT = 100  # in GB
+API_URL = 'https://api.aocrec.com/game/upload'
+# API_URL = 'http://198.12.114.144:8081/game/upload'
+API_URL_SERVER_STATUS = 'https://api.aocrec.com'
+SERVER_SAPCE_LIMIT = 15  # in GB
 
 # 定义数据库名
 database_name = f"migrate_{datetime.now().strftime('%Y%m%d%H%M%S')}.db"
+database_prod = 'db.sqlite'
 
 # 创建SQLite数据库引擎
 engine = create_engine(f'sqlite:///{database_name}')
+prod_engine = create_engine(f'sqlite:///{database_prod}')
 
 # 创建ORM基类
 Base = declarative_base()
@@ -50,6 +53,10 @@ Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
 
+# 创建生产环境的Session
+ProdSession = sessionmaker(bind=prod_engine)
+prod_session = ProdSession()
+
 # 检查 exception 文件夹是否存在，如果不存在就创建它
 exception_dir = os.path.join(os.getcwd(), 'exception')
 os.makedirs(exception_dir, exist_ok=True)
@@ -65,7 +72,7 @@ temp_dir = tempfile.mkdtemp()
 
 
 # 遍历records_dir目录下的每个文件
-N = 1000  # 每N个文件打包成一个压缩包
+N = 50  # 每N个文件打包成一个压缩包
 files_to_zip = []
 queued_logs = []
 
@@ -75,9 +82,22 @@ server_free_space = requests.get(API_URL_SERVER_STATUS, timeout=30).json()['disk
 # 创建一个tqdm对象
 pbar = tqdm(os.listdir(RECORDS_DIR))
 for entry in pbar:
+    # get basename(without extension) of the file
+    base, ext = os.path.splitext(entry)
+
+    # check if 'files' table of prod database has entry with 'md5' column equal to basename
+    prod_existed = prod_session.execute(
+        text(f"SELECT * FROM files WHERE md5 = '{base}'")
+    ).fetchone()
+
+    # if the entry exists, skip the file
+    if prod_existed:
+        pbar.set_description(f'Skipping {entry}...')
+        continue
+
     pbar.set_description(f'Disk space: {server_free_space}GB')
     while server_free_space < SERVER_SAPCE_LIMIT:
-        sleep_time = 60
+        sleep_time = 180
         while sleep_time > 0:
             pbar.set_description(f'Low space: {server_free_space}GB. Sleeping {sleep_time}s.')
             time.sleep(1)
@@ -107,7 +127,7 @@ for entry in pbar:
             response = requests.post(
                 API_URL,
                 files=files,
-                timeout=120,
+                timeout=1200,
                 auth=('username', 'password')
             )
 

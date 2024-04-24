@@ -1,6 +1,6 @@
 '''Get stats of total games/players, etc.'''
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sqlalchemy import func, literal_column, select, union_all
 from sqlalchemy.orm import Session
@@ -26,12 +26,12 @@ def get_total_stats_raw(db: Session) -> dict:
         literal_column("'unique_players'").label('stat'),
         func.count(Player.name_hash.distinct()))
 
-    last_month = datetime.now() - timedelta(days=30)
+    current_time = datetime.now()
+    current_month_start = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
     monthly_games = select(
         literal_column("'monthly_games'").label('stat'),
-        func.count(Game.id)).filter(
-            func.extract('month', Game.modified) == last_month.month,
-            func.extract('year', Game.modified) == last_month.year)
+        func.count(Game.id)).filter(Game.created >= current_month_start)
 
     query = union_all(unique_games, unique_players, monthly_games)
 
