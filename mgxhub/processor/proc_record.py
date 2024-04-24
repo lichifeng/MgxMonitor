@@ -3,8 +3,6 @@
 import os
 import threading
 
-from sqlalchemy.orm import Session
-
 from mgxhub import logger
 from mgxhub.parser import parse
 from mgxhub.util import run_slow_tasks
@@ -17,7 +15,6 @@ from .record2oss import async_save_to_s3
 
 
 def process_record(
-        session: Session,
         recpath: str,
         waitio: bool = False,
         opts: str = '',
@@ -62,7 +59,7 @@ def process_record(
 
     # Do upload, db insert, etc.
     tasks = []
-    tasks.append(async_save_game_sqlite(session, parsed_result))
+    tasks.append(async_save_game_sqlite(parsed_result))
     tasks.append(async_save_to_s3(recpath, parsed_result, s3replace, cleanup))
     if 'map' in parsed_result and 'base64' in parsed_result['map']:
         tasks.append(async_save_map(parsed_result['guid'], parsed_result['map']['base64']))
