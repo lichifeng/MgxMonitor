@@ -15,6 +15,22 @@ from mgxhub.db.operation import (fetch_latest_games_async,
 from webapi import app
 
 
+async def gen_homepage_data(db: Session, glimit: int = 5, plimit: int = 30, pdays: int = 30) -> str:
+    '''Generate homepage data of aocrec.com'''
+
+    results = await asyncio.gather(
+        fetch_latest_games_async(db, glimit),
+        get_active_players_async(db, plimit, pdays),
+        get_total_stats_raw_async(db)
+    )
+
+    return json.dumps(jsonable_encoder({
+        "latest_games": results[0],
+        "active_players": results[1],
+        "total_stats": results[2]
+    }))
+
+
 @app.get("/shortcut/homepage", tags=['stats'])
 async def fetch_homepage_data(
     glimit: int = Query(5, ge=1),
@@ -33,17 +49,7 @@ async def fetch_homepage_data(
     if cached:
         return Response(content=cached, media_type="application/json", headers={"X-From-Cache": "true"})
 
-    results = await asyncio.gather(
-        fetch_latest_games_async(db, glimit),
-        get_active_players_async(db, plimit, pdays),
-        get_total_stats_raw_async(db)
-    )
-
-    result = json.dumps(jsonable_encoder({
-        "latest_games": results[0],
-        "active_players": results[1],
-        "total_stats": results[2]
-    }))
+    result = await gen_homepage_data(db, glimit, plimit, pdays)
 
     cacher.set(cache_key, result)
 

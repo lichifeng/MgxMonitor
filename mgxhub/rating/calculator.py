@@ -13,7 +13,6 @@ from sqlalchemy import and_, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Query, Session
 
-from mgxhub.cacher import Cacher
 from mgxhub.logger import logger
 from mgxhub.model.orm import Game, Player, Rating
 
@@ -237,8 +236,6 @@ class EloCalculator:
 
         # Commit the changes
         self._session.commit()
-
-        Cacher(self._session).purge()
 
         logger.debug("Ratings table updated")
 

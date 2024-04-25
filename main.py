@@ -1,5 +1,6 @@
 '''Main entry point of the application'''
 
+from mgxhub.db import SQLite3Factory
 from mgxhub.watcher import RecordWatcher
 from webapi import app
 from webapi.admin_api import admin_api
@@ -17,6 +18,9 @@ from webapi.routers import (auth_logoutall, auth_onlineusers, backup_sqlite,
                             rating_status, rating_table, rating_unlock,
                             shortcut_homepage, stats_total, tmpdir_list,
                             tmpdir_purge)
+
+# Initialize the SQLite3 database
+SQLite3Factory()
 
 # Start monitoring the upload directory
 watcher = RecordWatcher()

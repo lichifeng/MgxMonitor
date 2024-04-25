@@ -27,8 +27,12 @@ class Cacher:
         # If v is a dict, serialize it to a JSON string
         serialized_v = json.dumps(v) if isinstance(v, dict) else v
 
-        cache = Cache(key=k, value=serialized_v)
-        self.db.merge(cache)
+        cache = self.db.query(Cache).filter(Cache.key == k).first()
+        if cache:
+            cache.value = serialized_v
+        else:
+            cache = Cache(key=k, value=serialized_v)
+            self.db.add(cache)
         self.db.commit()
 
     def purge(self) -> None:

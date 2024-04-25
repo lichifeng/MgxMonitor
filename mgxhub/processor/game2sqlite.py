@@ -1,5 +1,6 @@
 '''Save game data to SQLite database'''
 
+import threading
 import traceback
 
 from sqlalchemy.exc import IntegrityError
@@ -30,6 +31,7 @@ def save_game_sqlite(data: dict, retries: int = 3) -> tuple[str, str]:
         result = add_game(db, data)
         logger.info(f'Game added: {result}')
         if result[0] in ['success', 'updated']:
+            logger.debug(f"Triggering rating calculation for {result[1]}. Thread: {threading.get_ident()}")
             RatingLock().start_calc(schedule=True)
     except IntegrityError:
         if retries > 0:

@@ -1,6 +1,7 @@
 '''Standalone xecutable of elo rating calculator.'''
 
 import argparse
+import asyncio
 import fcntl
 import os
 import sys
@@ -9,13 +10,15 @@ import time
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from mgxhub.cacher import Cacher
 from mgxhub.config import cfg
 from mgxhub.logger import logger
+from webapi.routers.shortcut_homepage import gen_homepage_data
 
 from . import EloCalculator
 
 
-def main(db_path: str, duration_threshold: str, batch_size: str):
+async def main(db_path: str, duration_threshold: str, batch_size: str):
     '''Main function for the standalone executable of elo rating calculator.'''
 
     # Check if the lock file exists, other processes can read the RATING_CALC_LOCK_FILE environment variable to get the lock file path
@@ -51,11 +54,11 @@ def main(db_path: str, duration_threshold: str, batch_size: str):
             pass  # Under multi-threading, the scheduled signal may be removed by another thread
 
     start_time = time.time()
-
+    logger.debug("Start calculating ELO ratings...")
     try:
         engine = create_engine(f"sqlite:///{db_path}", echo=False, connect_args={'timeout': 60})
-        session = Session(engine)
-        elo = EloCalculator(session)
+        db = Session(engine)
+        elo = EloCalculator(db)
         duration_threshold = int(duration_threshold)
         batch_size = int(batch_size)
         try:
@@ -63,11 +66,18 @@ def main(db_path: str, duration_threshold: str, batch_size: str):
                 elo.update_ratings(duration_threshold, batch_size)
             else:
                 elo.update_ratings(15 * 60 * 1000, 150000)
+
+            # TODO Update cache.
+            homepage_data_cache_key = "homepage_data_5_30_30"
+            cacher = Cacher(db)
+            result = await gen_homepage_data(db, 5, 30, 30)
+            cacher.set(homepage_data_cache_key, result)
+
         except Exception as e:
             logger.error(f"Rating Error: {e}")
-            session.rollback()
+            db.rollback()
         finally:
-            session.close()
+            db.close()
             engine.dispose()
     finally:
         if os.path.exists(LOCK_FILE):
@@ -91,7 +101,7 @@ if __name__ == "__main__":
                         help='Batch size for ELO rating update')
     args = parser.parse_args()
 
-    main(args.db_path, args.duration_threshold, args.batch_size)
+    asyncio.run(main(args.db_path, args.duration_threshold, args.batch_size))
 
     # If another rating calculation is triggered during calculation, it will be
     # scheduled using a scheduled lock file. When the current calculation is
@@ -99,4 +109,4 @@ if __name__ == "__main__":
     # lock file will be removed in main().
     LOCK_FILE_SCHEDULED = cfg.get('rating', 'lockfile') + ".scheduled"
     if os.path.exists(LOCK_FILE_SCHEDULED):
-        main(args.db_path, args.duration_threshold, args.batch_size)
+        asyncio.run(main(args.db_path, args.duration_threshold, args.batch_size))
