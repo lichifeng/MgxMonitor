@@ -71,6 +71,7 @@ async def main(db_path: str, duration_threshold: str, batch_size: str):
             homepage_data_cache_key = "homepage_data_5_30_30"
             cacher = Cacher(db)
             result = await gen_homepage_data(db, 5, 30, 30)
+            cacher.purge()
             cacher.set(homepage_data_cache_key, result)
 
         except Exception as e:
