@@ -19,6 +19,7 @@ def get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset
     recent_games = db.query(Game, Player.rating_change)\
         .join(Player, Game.game_guid == Player.game_guid)\
         .filter(Player.name_hash == name_hash)\
+        .group_by(Game.game_guid)\
         .order_by(desc(Game.game_time))\
         .offset(offset)\
         .limit(limit)\
