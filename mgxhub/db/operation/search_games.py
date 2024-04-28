@@ -62,7 +62,7 @@ def search_games(session: Session, criteria: SearchCriteria, lang: str = 'en') -
         if isinstance(criteria.map_size, list) and len(criteria.map_size) > 0:
             query = query.filter(Game.map_size.in_(criteria.map_size))
 
-    if criteria.order_by.lower() in ['created', 'duration', 'game_time']:
+    if criteria.order_by and (criteria.order_by.lower() in ['created', 'duration', 'game_time']):
         order_by = getattr(Game, criteria.order_by)
     else:
         order_by = Game.game_time
