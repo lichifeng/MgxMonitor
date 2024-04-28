@@ -26,7 +26,7 @@ async def get_game(guid: str, lang: str = 'en', db: Session = Depends(db_dep)) -
         raise HTTPException(status_code=404, detail=f"Game profile [{guid}] not found")
 
     player_data = db.query(Player).filter(Player.game_guid == guid).all()
-    file_data = db.query(File).filter(File.game_guid == guid).limit(10).all()
+    file_data = db.query(File).filter(File.game_guid == guid).limit(20).all()
     chat_data = db.query(Chat.chat_time, Chat.chat_content)\
         .filter(Chat.game_guid == guid)\
         .group_by(Chat.chat_time, Chat.chat_content)\

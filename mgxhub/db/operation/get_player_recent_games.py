@@ -1,12 +1,14 @@
 '''Get recent games of a player.'''
 
+import gettext
+
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from mgxhub.model.orm import Game, Player
 
 
-def get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset: int = 0) -> list:
+def get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset: int = 0, lang: str = 'en') -> list:
     '''Get recent games of a player.
 
     Args:
@@ -25,10 +27,13 @@ def get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset
         .limit(limit)\
         .all()
 
-    return [(g.game_guid, g.version_code, g.map_name, g.matchup, g.duration, g.game_time, p) for g, p in recent_games]
+    t = gettext.translation(lang, localedir='translations', languages=["en"], fallback=True)
+    _ = t.gettext
+
+    return [(g.game_guid, g.version_code, _(g.map_name), g.matchup, g.duration, g.game_time, p) for g, p in recent_games]
 
 
-async def async_get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset: int = 0) -> list:
+async def async_get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset: int = 0, lang: str = 'en') -> list:
     '''Async version of fetch_player_recent_games()'''
 
-    return get_player_recent_games(db, name_hash, limit, offset)
+    return get_player_recent_games(db, name_hash, limit, offset, lang)

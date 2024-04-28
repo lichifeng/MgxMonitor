@@ -25,6 +25,7 @@ async def get_player_comprehensive(
     player_hash: str,
     recent_limit: int = Query(50, gt=0),
     friend_limit: int = Query(50, gt=0),
+    lang: str = 'en',
     db: Session = Depends(db_dep)
 ) -> dict:
     '''Fetch comprehensive information of a player
@@ -40,7 +41,7 @@ async def get_player_comprehensive(
     result = await asyncio.gather(
         async_get_player_totals(db, player_hash),
         async_get_player_rating_stats(db, player_hash),
-        async_get_player_recent_games(db, player_hash, recent_limit),
+        async_get_player_recent_games(db, player_hash, recent_limit, 0, lang),
         async_get_close_friends(db, player_hash, friend_limit),
         hash2name(db, player_hash)
     )

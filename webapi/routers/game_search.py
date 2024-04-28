@@ -12,7 +12,11 @@ from webapi import app
 
 
 @app.post("/game/search", tags=['game'])
-async def search_games(criteria: SearchCriteria = Body(...), session: Session = Depends(db_dep)) -> dict:
+async def search_games(
+    criteria: SearchCriteria = Body(...),
+    session: Session = Depends(db_dep),
+    lang: str = 'en'
+) -> dict:
     '''Search games by some criteria
 
     Args:
@@ -26,6 +30,6 @@ async def search_games(criteria: SearchCriteria = Body(...), session: Session = 
 
     logger.info(criteria.model_dump())
 
-    result = search_games_in_db(session, criteria)
+    result = search_games_in_db(session, criteria, lang)
 
     return result

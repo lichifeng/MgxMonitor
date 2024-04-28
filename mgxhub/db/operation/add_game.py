@@ -95,7 +95,7 @@ def add_game(session: Session, d: dict, t: str | None = None, source: str = "") 
         population=d.get('population'),
         speed=d.get('speedEn'),
         matchup=d.get('matchup'),
-        map_name=d.get('map', {}).get('nameEn'),
+        map_name=d.get('map', {}).get('nameEn', d.get('map', {}).get('name')),
         map_size=d.get('map', {}).get('sizeEn'),
         version_code=d.get('version', {}).get('code'),
         version_log=d.get('version', {}).get('logVer'),

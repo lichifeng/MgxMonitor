@@ -83,6 +83,7 @@ class GameDetail(BaseModel):
     duration: int | None
     players: dict[int, PlayerInGame] | None
     chats: list[ChatEntry] | None
+    files: list[list] | None
     biggest_file: tuple[str, int] | None
 
     def __init__(self, g: Game, p: list[Player], f: list[File], c: list[Chat], lang: str = 'en'):
@@ -125,6 +126,7 @@ class GameDetail(BaseModel):
             duration=g.duration,
             players={},
             chats=[],
+            files=[],
             biggest_file=('', 0)
         )
 
@@ -153,6 +155,8 @@ class GameDetail(BaseModel):
                 )
 
         for file in f:
+            self.files.append([file.created, file.md5, file.realsize, file.raw_filename,
+                               file.recorder_slot, self.players[file.recorder_slot].name, self.players[file.recorder_slot].name_hash])
             if file.recorder_slot in self.players:
                 if isinstance(file.realsize, int):
                     if file.realsize > self.biggest_file[1]:

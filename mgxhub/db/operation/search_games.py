@@ -1,5 +1,6 @@
 '''Search games in the database'''
 
+import gettext
 from datetime import datetime
 
 from sqlalchemy import desc
@@ -9,7 +10,7 @@ from mgxhub.model.orm import Game
 from mgxhub.model.searchcriteria import SearchCriteria
 
 
-def search_games(session: Session, criteria: SearchCriteria) -> dict:
+def search_games(session: Session, criteria: SearchCriteria, lang: str = 'en') -> dict:
     '''Search games.
 
     Args:
@@ -70,19 +71,22 @@ def search_games(session: Session, criteria: SearchCriteria) -> dict:
 
     query = query.order_by(order_by).limit(criteria.page_size).offset((criteria.page - 1) * criteria.page_size)
 
+    t = gettext.translation(lang, localedir='translations', languages=["en"], fallback=True)
+    _ = t.gettext
+
     games = [{
         'game_guid': game.game_guid,
         'version_code': game.version_code,
-        'map_name': game.map_name,
+        'map_name': _(game.map_name),
         'matchup': game.matchup,
         'duration': game.duration,
         'game_time': game.game_time,
         'population': game.population,
         'include_ai': game.include_ai,
         'is_multiplayer': game.is_multiplayer,
-        'speed': game.speed,
-        'victory_type': game.victory_type,
-        'map_size': game.map_size,
+        'speed': _(game.speed),
+        'victory_type': _(game.victory_type),
+        'map_size': _(game.map_size),
         'instruction': game.instruction,
         'players': [(player.slot, player.name, player.civ_name, player.type, player.name_hash) for player in game.players]
     } for game in query.all()]
