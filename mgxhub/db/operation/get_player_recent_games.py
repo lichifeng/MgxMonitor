@@ -30,7 +30,7 @@ def get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset
     t = gettext.translation(lang, localedir='translations', languages=["en"], fallback=True)
     _ = t.gettext
 
-    return [(g.game_guid, g.version_code, _(g.map_name), g.matchup, g.duration, g.game_time, p) for g, p in recent_games]
+    return [(g.game_guid, g.version_code, _(g.map_name), g.matchup, g.duration, g.game_time, p, [[_.name, _.name_hash] for _ in g.players]) for g, p in recent_games]
 
 
 async def async_get_player_recent_games(db: Session, name_hash: str, limit: int = 50, offset: int = 0, lang: str = 'en') -> list:
